@@ -30,12 +30,14 @@ set -e
 usage()
 {
 	printf "%b" "Usage: $0 [OPTIONS] { build | checkout | shell } [KASOPTIONS] [KASFILE]\n"
+	printf "%b" "       $0 [OPTIONS] dump [KASOPTIONS] [KASFILE] [OUTFILE]\n"
 	printf "%b" "       $0 [OPTIONS] for-all-repos [KASOPTIONS] [KASFILE] COMMAND\n"
 	printf "%b" "       $0 [OPTIONS] { clean | cleansstate | cleanall}\n"
 	printf "%b" "       $0 [OPTIONS] menu [KCONFIG]\n"
 	printf "%b" "\nPositional arguments:\n"
 	printf "%b" "build\t\t\tCheck out repositories and build target.\n"
 	printf "%b" "checkout\t\tCheck out repositories but do not build.\n"
+	printf "%b" "dump\t\t\tCheck out repositories and write flat version of config to OUTFILE.\n"
 	printf "%b" "shell\t\t\tRun a shell in the build environment.\n"
 	printf "%b" "for-all-repos\t\tRun specified command in each repository.\n"
 	printf "%b" "clean\t\t\tClean build artifacts, keep sstate cache and " \
@@ -265,7 +267,7 @@ while [ $# -gt 0 ]; do
 		shift 1
 		break
 		;;
-	build|checkout|for-all-repos|menu)
+	build|checkout|dump|for-all-repos|menu)
 		KAS_REPO_MOUNT_OPT_DEFAULT="ro"
 		KAS_CMD=$1
 		shift 1
@@ -311,6 +313,12 @@ while [ $# -gt 0 ] && [ $KAS_EXTRA_BITBAKE_ARGS -eq 0 ]; do
 		shift 1
 		;;
 	*)
+		# the last argument of dump is the output file
+		if [ "$KAS_CMD" = "dump" ] && [ "$#" -eq "1" ]; then
+			KAS_DUMP_OUTFILE="$1"
+			shift 1
+			continue
+		fi
 		KAS_FILES=
 		# SC2086: Double quote to prevent globbing and word splitting.
 		# shellcheck disable=2086
@@ -502,6 +510,10 @@ fi
 set -- "$@" ${KAS_FILES}
 if [ "$KAS_CMD" = "for-all-repos" ]; then
 	set -- "$@" "${KAS_REPO_CMD}"
+fi
+
+if [ "$KAS_CMD" = "dump" ]; then
+	set -- "$@" "${KAS_DUMP_OUTFILE}"
 fi
 
 # rotate any extra bitbake args from the front to the end of the argument list
