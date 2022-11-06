@@ -77,11 +77,22 @@ def test_dump(changedir, tmpdir):
     os.chdir(tdir)
 
     formats = ['json', 'yaml']
-    for f in formats:
+    resolve = ['', '--resolve-refs']
+    # test cross-product of these options (formats x resolve)
+    for f, r in ((f, r) for f in formats for r in resolve):
         outfile = 'test_flat.%s' % f
-        kas.kas(('dump --format %s test.yml %s' % (f, outfile)).split())
+        kas.kas(('dump --format %s %s test.yml %s' % (f, r, outfile)).split())
         assert os.path.exists('test_flat.%s' % f)
-        with open(outfile) as conff:
-            flatconf = json.load(conff) if f == 'json' else yaml.safe_load(conff)
-            assert flatconf['repos']['kas3']['refspec'] == 'master'
+        with open(outfile) as cf:
+            flatconf = json.load(cf) if f == 'json' else yaml.safe_load(cf)
+            refspec = flatconf['repos']['kas3']['refspec']
+            if r == '':
+                assert refspec == 'master'
+            else:
+                assert refspec != 'master'
             assert 'includes' not in flatconf['header']
+            # check if kas can read the generated file
+            if f == 'yaml':
+                shutil.rmtree('%s/build' % tdir, ignore_errors=True)
+                kas.kas(('checkout %s' % outfile).split())
+                assert os.path.exists('build/conf/local.conf')
