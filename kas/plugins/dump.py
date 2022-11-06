@@ -100,6 +100,9 @@ class Dump(Checkout):
                             type=int,
                             default=4,
                             help='Line indent (number of spaces)')
+        parser.add_argument('--resolve-refs',
+                            action='store_true',
+                            help='Replace floating refs with exact SHAs')
         parser.add_argument('outfile',
                             help='Output filename')
 
@@ -111,6 +114,12 @@ class Dump(Checkout):
         # includes are already expanded, delete the key
         if 'includes' in config_expanded['header']:
             del config_expanded['header']['includes']
+
+        if args.resolve_refs:
+            repos = ctx.config.get_repos()
+            for r in repos:
+                if r.refspec:
+                    config_expanded['repos'][r.name]['refspec'] = r.revision
 
         with open(args.outfile, 'w') as f:
             if args.format == 'json':
