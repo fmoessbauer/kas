@@ -214,6 +214,12 @@ It's also possible to include configuration files from other repos like this:
           file: hw1/kas-hw-bsp1.yml
         - repo: meta-custom
           file: products/product.yml
+        # only include this if env-var REGION=CN and MIRRORS=ON
+        - repo: meta-custom
+          file: opt/mirrors-cn.yml
+          if:
+            REGION: CN
+            MIRRORS: ON
     repos:
       meta-custom:
       meta-bsp-collection:
@@ -306,6 +312,13 @@ Configuration reference
       * ``file``: string [required]
           The path to the file, relative to the root of the specified
           repository.
+
+      * ``if``: dict [optional]
+          Pairs of env variable names and values. Only if all pairs can
+          be found in the calling environment, include this file.
+          Only the calling environment is evaluated. By that, default
+          values of entries specified in the ``env`` section are
+          not considered for the check.
 
 * ``build_system``: string [optional]
     Defines the bitbake-based build system. Known build systems are
