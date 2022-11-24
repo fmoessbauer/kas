@@ -81,7 +81,7 @@ class Config:
             Returns repos that are in config but not on disk
         """
         (self._config, missing_repo_names) = \
-            self.handler.get_config(repos=repo_paths)
+            self.handler.get_config(repos=repo_paths, env=os.environ)
 
         return missing_repo_names
 

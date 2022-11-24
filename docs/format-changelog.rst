@@ -171,3 +171,12 @@ Added
 ~~~~~
 
 - The key ``artifacts`` is introduced to describe expected build artifacts.
+
+Version 18
+----------
+
+Added
+~~~~~
+
+- Includes can now be controlled based on values of environment variables by
+  adding key-value pairs to the ``if`` attribute of an include entry.
