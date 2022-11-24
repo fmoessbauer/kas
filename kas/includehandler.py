@@ -127,10 +127,11 @@ class IncludeHandler:
         self.top_files = top_files
         self.top_repo_path = top_repo_path
 
-    def get_config(self, repos=None):
+    def get_config(self, repos=None, env={}):
         """
         Parameters:
           repos -- A dictionary that maps repo names to directory paths
+          env -- A dict-like object that maps env variables to their values
 
         Returns:
           (config, repos)
@@ -200,6 +201,15 @@ class IncludeHandler:
                     configs.extend(cfg)
                     missing_repos.extend(rep)
                 elif isinstance(include, Mapping):
+                    skip_include = False
+                    conditions = include.get('if', {})
+                    for c in conditions:
+                        if c not in env or env[c] != conditions[c]:
+                            skip_include = True
+                            break
+                    if skip_include:
+                        continue
+
                     includerepo = include.get('repo', None)
                     includedir = repos.get(includerepo, None)
                     if includedir is not None:

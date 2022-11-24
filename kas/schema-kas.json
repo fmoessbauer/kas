@@ -38,7 +38,14 @@
                                     "repo",
                                     "file"
                                 ],
-                                "additionalProperties": false,
+                                "additionalProperties": {
+                                    "if": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                            "type": ["string"]
+                                        }
+                                    }
+                                },
                                 "properties": {
                                     "repo": {
                                         "type": "string"
