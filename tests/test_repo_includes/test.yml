@@ -1,8 +1,13 @@
 header:
-  version: 11
+  version: 13
   includes:
     - repo: subrepo
       file: test.yml
+    - repo: mirrors
+      file: mirrors-foo.yml
+      if:
+        PYTEST_KAS_AREA: 'FOO'
+        PYTEST_KAS_MIRRORS: 'ON'
 
 repos:
   this:
