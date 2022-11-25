@@ -382,3 +382,17 @@ v: {v3: z, v4: z}''')}
             assert index['v2'] < index['v1']
             assert index['v3'] < index['v1']
             assert index['v5'] < index['v1']
+
+    def test_conditional_includes(self, tmpdir, monkeypatch):
+        monkeypatch.setattr(includehandler, '__file_version__', 13)
+        ginc = includehandler.IncludeHandler(
+            ['tests/test_repo_includes/test.yml'], '.')
+        _, missing = ginc.get_config()
+        assert 'mirrors' not in missing
+        # assume the following env vars are set
+        test_env = {
+            'IRRELEVANT': 'not-relevant',
+            'PYTEST_KAS_AREA': 'FOO',
+            'PYTEST_KAS_MIRRORS': 'ON'}
+        _, missing = ginc.get_config(env=test_env)
+        assert 'mirrors' in missing
