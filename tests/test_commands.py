@@ -62,6 +62,18 @@ def test_checkout(changedir, tmpdir):
     assert not os.path.exists('build/sstate-cache')
 
 
+def test_checkout_create_refs(changedir, tmpdir):
+    tpath = tmpdir.mkdir('test_commands')
+    repo_cache = tpath.mkdir('repos')
+    shutil.rmtree(tpath, ignore_errors=True)
+    shutil.copytree('tests/test_patch', tpath)
+    os.chdir(tpath)
+    os.environ['KAS_REPO_REF_DIR'] = str(repo_cache)
+    kas.kas(['checkout', 'test.yml'])
+    del os.environ['KAS_REPO_REF_DIR']
+    assert os.path.exists(repo_cache / 'github.com.siemens.kas.git')
+
+
 def test_repo_includes(changedir, tmpdir):
     tdir = str(tmpdir.mkdir('test_commands'))
     shutil.rmtree(tdir, ignore_errors=True)
