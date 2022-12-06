@@ -163,19 +163,34 @@ def repos_fetch(repos):
     """
         Fetches the list of repositories to the kas_work_dir.
     """
+    def check_result(tasks):
+        for task in tasks:
+            if task.result():
+                sys.exit(task.result())
+
     if len(repos) == 0:
         return
 
     tasks = []
-    for repo in repos:
-        tasks.append(asyncio.ensure_future(repo.fetch_async()))
-
+    refdir = get_context().kas_repo_ref_dir
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(asyncio.wait(tasks))
 
-    for task in tasks:
-        if task.result():
-            sys.exit(task.result())
+    # create a bare-clone of all repos (only once per URI)
+    if refdir:
+        unique_origs = dict([(r.qualified_name, r) for r in repos])
+        for repo in unique_origs.values():
+            tasks.append(asyncio.ensure_future(
+                repo.fetch_async_as_ref(refdir)))
+        loop.run_until_complete(asyncio.wait(tasks))
+        check_result(tasks)
+
+    # clone the repos, possibly via their bare-clone
+    tasks = []
+    for repo in repos:
+        tasks.append(asyncio.ensure_future(repo.fetch_async(refdir)))
+
+    loop.run_until_complete(asyncio.wait(tasks))
+    check_result(tasks)
 
 
 def repos_apply_patches(repos):
