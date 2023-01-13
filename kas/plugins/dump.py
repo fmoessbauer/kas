@@ -22,12 +22,16 @@
 """
     This plugin implements the ``kas dump`` command.
 
-    When this command is executed, kas will parse all referenced config
-    files, expand includes and print a flattened yaml version of the
-    configuration to stdout. This config is semantically identical to the
-    input, but does not include any references to other configuration files.
-    The output of this command can be used to further analyse the build
+    When this command is executed in default mode, kas will parse all
+    referenced config files, expand includes and print a flattened yaml version
+    of the configuration to stdout. This config is semantically identical to
+    the input, but does not include any references to other configuration
+    files. The output of this command can be used to further analyse the build
     configuration.
+
+    When running with --lock, a lock-file is created which only contains the
+    exact refspecs of each repository. This file can be used to pin the
+    refspecs of floating branches, while still keeping an easy update path.
 
     Please note:
 
@@ -43,6 +47,15 @@
     The generated config can be used as input for kas:
 
         kas build kas-project-expanded.yml
+
+    Example of the locking mechanism (call again to regenerate lockfile):
+
+        kas dump --lock kas-project.yml > kas-project.lock.yml
+
+    The generated file can be used on the kas cmdline to pin the revisions:
+
+        kas build kas-project.yml:kas-project.lock.yml
+
 """
 
 import logging
@@ -94,6 +107,7 @@ class Dump(Checkout):
     @classmethod
     def setup_parser(cls, parser):
         super().setup_parser(parser)
+        lk_or_env = parser.add_mutually_exclusive_group()
         parser.add_argument('--format',
                             choices=['yaml', 'json'],
                             default='yaml',
@@ -105,9 +119,12 @@ class Dump(Checkout):
         parser.add_argument('--resolve-refs',
                             action='store_true',
                             help='Replace floating refs with exact SHAs')
-        parser.add_argument('--resolve-env',
-                            action='store_true',
-                            help='Set env defaults to captured env value')
+        lk_or_env.add_argument('--resolve-env',
+                               action='store_true',
+                               help='Set env defaults to captured env value')
+        lk_or_env.add_argument('--lock',
+                               action='store_true',
+                               help='Create lockfile with exact SHAs')
 
     def run(self, args):
         args.skip += [
@@ -119,17 +136,25 @@ class Dump(Checkout):
 
         super().run(args)
         ctx = get_context()
-        config_expanded = ctx.config.get_config()
+        config_expanded = {'header': {'version': 7}} if args.lock \
+            else ctx.config.get_config()
+        repos = ctx.config.get_repos()
+
+        if args.lock:
+            args.resolve_refs = True
+            config_expanded['repos'] = \
+                {r.name: {'refspec': None} for r in repos}
 
         # includes are already expanded, delete the key
         if 'includes' in config_expanded['header']:
             del config_expanded['header']['includes']
 
         if args.resolve_refs:
-            repos = ctx.config.get_repos()
             for r in repos:
                 if r.refspec:
                     config_expanded['repos'][r.name]['refspec'] = r.revision
+                elif args.lock:
+                    del config_expanded['repos'][r.name]
 
         if args.resolve_env and 'env' in config_expanded:
             config_expanded['env'] = ctx.config.get_environment()
