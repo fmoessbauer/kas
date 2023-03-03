@@ -139,3 +139,4 @@ Added
 
 - The integrity of repositories can now be securely validated via providing a
   ``sha256sum`` value.
+- The ``overrides`` top-level entry can be used to pin floating repo refspecs.
