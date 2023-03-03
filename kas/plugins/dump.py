@@ -63,7 +63,6 @@ import sys
 import json
 import yaml
 from typing import TypeVar, TextIO
-from dataclasses import dataclass
 from collections import OrderedDict
 from kas.context import get_context
 from kas.plugins.checkout import Checkout
@@ -72,12 +71,15 @@ __license__ = 'MIT'
 __copyright__ = 'Copyright (c) Siemens AG, 2022'
 
 
-@dataclass
 class IoTarget:
     StrOrTextIO = TypeVar('StrOrTextIO', str, TextIO)
 
     target: StrOrTextIO
     managed: bool
+
+    def __init__(self, target, managed):
+        self.target = target
+        self.managed = managed
 
 
 class IoTargetMonitor:
