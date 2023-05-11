@@ -259,9 +259,12 @@ class Menu:
                 'Menu plugin requires \'python3-newt\' distribution package.')
 
         ctx = create_global_context(args)
+        kconf_filename = args.kconfig \
+            if os.path.isabs(args.kconfig) \
+            else os.path.join(ctx.kas_current_dir, args.kconfig)
 
         try:
-            self.kconf = Kconfig(args.kconfig, warn_to_stderr=False)
+            self.kconf = Kconfig(kconf_filename, warn_to_stderr=False)
         except (KconfigError, FileNotFoundError) as err:
             raise KConfigLoadError(str(err))
 
@@ -288,6 +291,7 @@ class Menu:
             build_args.task = None
             build_args.extra_bitbake_args = []
             build_args.skip = None
+            build_args.directory = ctx.kas_current_dir
 
             Build().run(build_args)
 
