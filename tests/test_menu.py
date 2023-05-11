@@ -22,23 +22,29 @@
 
 import os
 import shutil
+import snack
+import pytest
 from kas import kas
 
-INPUTS = iter([' ', None, ' ', None])
-ACTIONS = iter([None, 'build', None, 'build'])
-SELECTIONS = iter([0, 3])
 
+@pytest.fixture(autouse=True)
+def patch_kas(monkeypatch):
+    INPUTS = iter([' ', None, ' ', None])
+    ACTIONS = iter([None, 'build', None, 'build'])
+    SELECTIONS = iter([0, 3])
 
-def mock_runOnce(unused1):
-    return next(INPUTS)
+    def mock_runOnce(unused1):
+        return next(INPUTS)
 
+    def mock_buttonPressed(unused1, unused2):
+        return next(ACTIONS)
 
-def mock_buttonPressed(unused1, unused2):
-    return next(ACTIONS)
+    def mock_current(unused1):
+        return next(SELECTIONS)
 
-
-def mock_current(unused1):
-    return next(SELECTIONS)
+    monkeypatch.setattr(snack.GridFormHelp, 'runOnce', mock_runOnce)
+    monkeypatch.setattr(snack.ButtonBar, 'buttonPressed', mock_buttonPressed)
+    monkeypatch.setattr(snack.Listbox, 'current', mock_current)
 
 
 def file_contains(filename, expected):
@@ -60,10 +66,6 @@ def test_menu(monkeypatch, tmpdir):
     cwd = os.getcwd()
     os.chdir(tdir)
 
-    monkeypatch.setattr('snack.GridFormHelp.runOnce', mock_runOnce)
-    monkeypatch.setattr('snack.ButtonBar.buttonPressed', mock_buttonPressed)
-    monkeypatch.setattr('snack.Listbox.current', mock_current)
-
     # select opt1 & build
     kas.kas(['menu'])
     assert file_contains('build/conf/local.conf', 'OPT1 = "1"\n')
@@ -79,5 +81,19 @@ def test_menu(monkeypatch, tmpdir):
     kas.kas(['menu'])
     assert file_contains('build/conf/local.conf', 'OPT1 = "1"\n')
     assert check_bitbake_options('-c build target2\n')
+
+    os.chdir(cwd)
+
+
+def test_menu_inc_workdir(monkeypatch, tmpdir):
+    tdir = str(tmpdir / 'test_menu_inc')
+    kas_workdir = str(tmpdir / 'test_menu_inc' / 'out')
+    shutil.copytree('tests/test_menu', tdir)
+    cwd = os.getcwd()
+    os.chdir(tdir)
+    os.mkdir(kas_workdir)
+    os.environ['KAS_WORK_DIR'] = kas_workdir
+    kas.kas(['menu'])
+    del os.environ['KAS_WORK_DIR']
 
     os.chdir(cwd)
