@@ -71,13 +71,21 @@ class Context:
         Implements the kas build context.
     """
     def __init__(self, args):
-        work_dir = os.environ.get('KAS_WORK_DIR', os.getcwd())
-        self.__kas_work_dir = os.path.abspath(work_dir)
-        build_dir = os.environ.get('KAS_BUILD_DIR',
-                                   os.path.join(self.__kas_work_dir, 'build'))
-        self.__kas_build_dir = os.path.abspath(build_dir)
+
+        def _relocate_to_cwd(path):
+            return path if os.path.isabs(path) \
+                else os.path.join(self.__kas_current_dir, path)
+
+        self.__kas_current_dir = os.path.abspath(
+            getattr(args, 'directory', None))
+
+        work_dir = os.environ.get('KAS_WORK_DIR', self.__kas_current_dir)
+        self.__kas_work_dir = _relocate_to_cwd(work_dir)
+        build_dir = os.environ.get('KAS_BUILD_DIR', 'build')
+        self.__kas_build_dir = _relocate_to_cwd(build_dir)
         ref_dir = os.environ.get('KAS_REPO_REF_DIR', None)
-        self.__kas_repo_ref_dir = os.path.abspath(ref_dir) if ref_dir else None
+        self.__kas_repo_ref_dir = _relocate_to_cwd(ref_dir) \
+            if ref_dir else None
         self.setup_initial_environ()
         self.config = None
         self.args = args
@@ -131,6 +139,10 @@ class Context:
             The reference directory for the repo
         """
         return self.__kas_repo_ref_dir
+
+    @property
+    def kas_current_dir(self):
+        return self.__kas_current_dir
 
     @property
     def force_checkout(self):

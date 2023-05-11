@@ -24,6 +24,7 @@
 """
 
 import os
+import logging
 from .repos import Repo
 from .includehandler import IncludeHandler, IncludeException
 
@@ -41,13 +42,20 @@ class Config:
         self._override_target = target
         self._override_task = task
         self._config = {}
+        self.top_repo_path = None
         if not filename:
             filename = os.path.join(ctx.kas_work_dir, CONFIG_YAML_FILE)
+            self.top_repo_path = ctx.kas_current_dir
 
-        self.filenames = [os.path.abspath(configfile)
+        self.filenames = [os.path.abspath(os.path.join(ctx.kas_current_dir,
+                                                       configfile))
+                          if not os.path.isabs(configfile) else configfile
                           for configfile in filename.split(':')]
-        self.top_repo_path = Repo.get_root_path(
-            os.path.dirname(self.filenames[0]))
+
+        if not self.top_repo_path:
+            self.top_repo_path = Repo.get_root_path(
+                os.path.dirname(self.filenames[0]))
+        logging.debug('top repo path: %s', self.top_repo_path)
 
         repo_paths = [Repo.get_root_path(os.path.dirname(configfile),
                                          fallback=False)

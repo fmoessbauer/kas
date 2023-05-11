@@ -131,6 +131,10 @@ def kas_get_argparser():
                         default='%s' % (default_log_level),
                         help='Set log level (default: %s)' % default_log_level)
 
+    parser.add_argument('-C', '--directory', metavar='DIR',
+                        default=os.getcwd(),
+                        help='Change to DIR before performing any operations')
+
     subparser = parser.add_subparsers(help='sub command help', dest='cmd')
 
     for plugin in plugins.all():
