@@ -71,6 +71,19 @@ def test_invalid_checkout(changedir, tmpdir, capsys):
         kas.kas(['checkout', 'test-invalid.yml'])
 
 
+def test_checkout_relocate(changedir, tmpdir):
+    tdir = str(tmpdir / 'test_commands')
+    shutil.copytree('tests/test_commands', tdir)
+    cwd = str(tmpdir / 'test_commands_other')
+    kas_workdir = str(tmpdir / 'test_commands_work')
+    os.mkdir(cwd)
+    os.mkdir(kas_workdir)
+    os.chdir(cwd)
+    os.environ['KAS_WORK_DIR'] = kas_workdir
+    kas.kas(['-C', tdir, 'checkout', 'test.yml'])
+    del os.environ['KAS_WORK_DIR']
+
+
 def test_checkout_create_refs(changedir, tmpdir):
     tdir = str(tmpdir / 'test_commands')
     repo_cache = pathlib.Path(str(tmpdir.mkdir('repos')))
