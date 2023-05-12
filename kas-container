@@ -59,6 +59,8 @@ usage()
 	printf "%b" "\t\t\tfor running the build.\n"
 	printf "%b" "-d\t\t\tPrint debug output (deprecated, use -l debug).\n"
 	printf "%b" "-l, --log-level\t\tSet log level (default=info).\n"
+	printf "%b" "-C, --directory\t\tChange to DIR before performing " \
+			"any operations.\n"
 	printf "%b" "-v\t\t\tSame as -d (deprecated).\n"
 	printf "%b" "--version\t\tprint program version.\n"
 	printf "%b" "--ssh-dir\t\tDirectory containing SSH configurations.\n"
@@ -147,6 +149,7 @@ set_container_image_var() {
 	KAS_CONTAINER_IMAGE="${KAS_CONTAINER_IMAGE:-${KAS_CONTAINER_IMAGE_DEFAULT}}"
 }
 
+KAS_CURRENT_DIR=$(readlink -fv "$(pwd)")
 KAS_WORK_DIR=$(readlink -fv "${KAS_WORK_DIR:-$(pwd)}")
 # KAS_WORK_DIR needs to exist for the subsequent code
 trace mkdir -p "${KAS_WORK_DIR}"
@@ -273,6 +276,11 @@ while [ $# -gt 0 ]; do
 		KAS_OPTIONS_DIRECT="${KAS_OPTIONS_DIRECT} -l $2"
 		shift 2
 		;;
+	-C | --directory)
+		KAS_CURRENT_DIR="$(readlink -fv "$2")"
+		cd "$(readlink -fv "$2")"
+		shift 2
+		;;
 	--version)
 		echo "$(basename "$0") $KAS_IMAGE_VERSION_DEFAULT"
 		exit 0
@@ -372,12 +380,11 @@ while [ $# -gt 0 ] && [ $KAS_EXTRA_BITBAKE_ARGS -eq 0 ]; do
 done
 
 if [ -n "${KAS_FIRST_FILE}" ]; then
-	KAS_FILE_DIR="$(dirname "${KAS_FIRST_FILE}")"
-	KAS_REPO_DIR=$(git -C "${KAS_FILE_DIR}" rev-parse --show-toplevel 2>/dev/null) \
-		|| KAS_REPO_DIR=$(hg --cwd "${KAS_FILE_DIR}" root 2>/dev/null) \
-		|| KAS_REPO_DIR=${KAS_FILE_DIR}
+	KAS_REPO_DIR=$(git -C "${KAS_CURRENT_DIR}" rev-parse --show-toplevel 2>/dev/null) \
+		|| KAS_REPO_DIR=$(hg --cwd "${KAS_CURRENT_DIR}" root 2>/dev/null) \
+		|| KAS_REPO_DIR=${KAS_CURRENT_DIR}
 else
-	KAS_REPO_DIR=$(pwd)
+	KAS_REPO_DIR="${KAS_CURRENT_DIR}"
 fi
 
 if [ "${KAS_CMD}" = "menu" ]; then
