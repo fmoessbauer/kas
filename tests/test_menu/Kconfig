@@ -11,7 +11,7 @@ config BOOL_OPT1
 
 config KAS_INCLUDE_OPT1
 	string
-	default "opt1.yaml"
+	default '{"repo":"this", "file":"opt1.yaml"}'
 	depends on BOOL_OPT1
 
 choice

@@ -42,7 +42,9 @@
 
      - kas configuration files that will be included when building the
        generated configuration. Those are picked up from kconfig string
-       variables that have the name prefix ``KAS_INCLUDE_``.
+       variables that have the name prefix ``KAS_INCLUDE_``. The value can
+       either be a string or an include node in json format for repo-relative
+       includes.
 
      - bitbake targets that shall be built via the generated configuration.
        Those are picked up from kconfig string variables that have the name
@@ -70,12 +72,13 @@ import logging
 import os
 import pprint
 import yaml
+import json
 from kconfiglib import Kconfig, Symbol, Choice, KconfigError, \
     expr_value, TYPE_TO_STR, MENU, COMMENT, STRING, BOOL, INT, HEX, UNKNOWN
 from kas import __version__, __file_version__
 from kas.context import create_global_context
 from kas.config import CONFIG_YAML_FILE
-from kas.includehandler import load_config as load_config_yaml
+from kas.includehandler import load_config as load_config_yaml, config_valid
 from kas.plugins.build import Build
 from kas.kasusererror import KasUserError
 
@@ -196,7 +199,18 @@ class Menu:
 
             if symname.startswith('KAS_INCLUDE_'):
                 check_sym_is_string(sym)
-                if symvalue != '':
+                if symvalue == '':
+                    continue
+                elif symvalue.startswith('{'):
+                    try:
+                        inc_node = json.loads(symvalue)
+                        kas_includes.append(inc_node)
+                    except json.JSONDecodeError as e:
+                        raise KConfigLoadError(
+                            'Value of {} menu option is not valid json: {}'
+                            .format(symname, str(e))
+                        )
+                else:
                     kas_includes.append(symvalue)
             elif symname.startswith('KAS_TARGET_'):
                 check_sym_is_string(sym)
@@ -231,6 +245,10 @@ class Menu:
         logging.debug('Menu configuration:\n%s', pprint.pformat(config))
 
         if config != self.orig_config:
+            if not config_valid(config):
+                raise KConfigLoadError(
+                    'Generated config does not meet config schema'
+                )
             logging.info('Saving configuration as %s', filename)
 
             # format multi-line strings more nicely
