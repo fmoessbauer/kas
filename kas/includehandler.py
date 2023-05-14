@@ -50,6 +50,20 @@ class LoadConfigException(KasUserError):
         super().__init__('{}: {}'.format(message, filename))
 
 
+def config_valid(config):
+    """
+        Validate the config dict against the json schema.
+        Returns True if valid, False otherwise.
+    """
+    validator = Draft4Validator(CONFIGSCHEMA)
+    valid = True
+
+    for error in validator.iter_errors(config):
+        valid = False
+        logging.error('Config file validation Error:\n%s', error)
+    return valid
+
+
 def load_config(filename):
     """
         Load the configuration file and test if version is supported.
@@ -68,14 +82,7 @@ def load_config(filename):
         raise LoadConfigException('Config file extension not recognized',
                                   filename)
 
-    validator = Draft4Validator(CONFIGSCHEMA)
-    validation_error = False
-
-    for error in validator.iter_errors(config):
-        validation_error = True
-        logging.error('Config file validation Error:\n%s', error)
-
-    if validation_error:
+    if not config_valid(config):
         raise LoadConfigException('Error(s) occured while validating the '
                                   'config file', filename)
 
