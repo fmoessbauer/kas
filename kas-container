@@ -384,6 +384,13 @@ if [ "${KAS_CMD}" = "menu" ]; then
 	if [ -z "${KAS_FIRST_FILE}" ]; then
 		KAS_FIRST_FILE="Kconfig"
 	fi
+	# When using the menu plugin, we need to track the KAS_REPO_DIR outside of
+	# the container to later allow a simple `kas-container build`. For that, we
+	# write the relevant state as key-value pairs (env format) into a file.
+	# If this file exists, it will be sourced prior to starting the container.
+	if ! [ "$(realpath -qe "${KAS_REPO_DIR}")" = "$(realpath -qe "${KAS_WORK_DIR}")" ]; then
+		echo "KAS_REPO_DIR=${KAS_REPO_DIR}" > "${KAS_WORK_DIR}/.kas-container.conf"
+	fi
 
 	BUILD_SYSTEM=$(tr '\n' '\f' 2>/dev/null < ${KAS_FIRST_FILE} | \
 		sed -e 's/\(.*\fconfig KAS_BUILD_SYSTEM\f\(.*\)\|.*\)/\2/' \
@@ -396,6 +403,10 @@ else
 
 	BUILD_SYSTEM=$(grep -e "^build_system: " "${KAS_FIRST_FILE}" 2>/dev/null | \
 		sed 's/build_system:[ ]\+//')
+fi
+if [ -f "${KAS_WORK_DIR}/.kas-container.conf" ]; then
+	# shellcheck disable=SC1090
+	. "$(realpath -qe "${KAS_WORK_DIR}/.kas-container.conf")"
 fi
 
 if [ "${BUILD_SYSTEM}" = "isar" ]; then
