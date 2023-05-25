@@ -384,6 +384,15 @@ if [ "${KAS_CMD}" = "menu" ]; then
 	if [ -z "${KAS_FIRST_FILE}" ]; then
 		KAS_FIRST_FILE="Kconfig"
 	fi
+	# When using the menu plugin, we need to track the KAS_REPO_DIR outside of
+	# the container to later allow a simple `kas-container build`. For that, we
+	# tell the kas menu plugin via an env-var about the location on the host. This
+	# data is then added to the .config.yaml where it can be evaluated by the next
+	# invocation of kas-container.
+
+	if ! [ "$(realpath -qe "${KAS_REPO_DIR}")" = "$(realpath -qe "${KAS_WORK_DIR}")" ]; then
+		set -- "$@" -e _KAS_REPO_DIR_HOST="$(readlink -fv "${KAS_REPO_DIR}")"
+	fi
 
 	BUILD_SYSTEM=$(tr '\n' '\f' 2>/dev/null < ${KAS_FIRST_FILE} | \
 		sed -e 's/\(.*\fconfig KAS_BUILD_SYSTEM\f\(.*\)\|.*\)/\2/' \
@@ -396,6 +405,11 @@ else
 
 	BUILD_SYSTEM=$(grep -e "^build_system: " "${KAS_FIRST_FILE}" 2>/dev/null | \
 		sed 's/build_system:[ ]\+//')
+fi
+_KAS_REPO_DIR=$(grep -e "^_source_dir_host: " "${KAS_FIRST_FILE}" 2>/dev/null | \
+	sed 's/_source_dir_host:[ ]\+//')
+if [ -n "${_KAS_REPO_DIR}" ]; then
+	KAS_REPO_DIR="${_KAS_REPO_DIR}"
 fi
 
 if [ "${BUILD_SYSTEM}" = "isar" ]; then
