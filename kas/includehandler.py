@@ -41,6 +41,8 @@ from . import CONFIGSCHEMA
 __license__ = 'MIT'
 __copyright__ = 'Copyright (c) Siemens AG, 2017-2021'
 
+SOURCE_DIR_OVERRIDE_KEY = '_source_dir'
+
 
 class LoadConfigException(KasUserError):
     """
@@ -99,7 +101,11 @@ def load_config(filename):
         logging.warning('Obsolete ''proxy_config'' detected. '
                         'This has no effect and will be rejected soon.')
 
-    return config
+    kas_source_dir = None
+    if config.get(SOURCE_DIR_OVERRIDE_KEY):
+        kas_source_dir = config[SOURCE_DIR_OVERRIDE_KEY]
+
+    return (config, kas_source_dir)
 
 
 class IncludeException(KasUserError):
@@ -144,6 +150,9 @@ class IncludeHandler:
         file = Path(self.top_files[0])
         return file.parent / (file.stem + '.lock' + file.suffix)
 
+    def get_top_repo_path(self):
+        return self.top_repo_path
+
     def get_config(self, repos=None):
         """
         Parameters:
@@ -187,7 +196,12 @@ class IncludeHandler:
             missing_repos = []
             configs = []
             try:
-                current_config = load_config(filename)
+                current_config, src_dir = load_config(filename)
+                # src_dir must only be set by auto-generated config file
+                if src_dir:
+                    self.top_repo_path = src_dir
+                    repo_path = src_dir
+
             except FileNotFoundError:
                 raise LoadConfigException('Configuration file not found',
                                           filename)
