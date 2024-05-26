@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - next
+      - next-bullseye
 
 env:
   SHELLCHECK_VERSION: v0.7.1
@@ -93,11 +94,11 @@ jobs:
             SOURCE_DATE_EPOCH=${{ env.SOURCE_DATE_EPOCH }}
             DEBIAN_TAG=${{ env.DEBIAN_TAG }}
           outputs: type=docker,rewrite-timestamp=true
-          tags: ghcr.io/${{ github.repository }}/${{ matrix.image-name }}:next
+          tags: ghcr.io/${{ github.repository }}/${{ matrix.image-name }}:${{ github.ref_name }}
       - name: Test ${{ matrix.image-name }} image
         run: |
           cd image-tests/${{ matrix.image-name }}
-          KAS_CONTAINER_IMAGE=ghcr.io/${{ github.repository }}/${{ matrix.image-name }}:next \
+          KAS_CONTAINER_IMAGE=ghcr.io/${{ github.repository }}/${{ matrix.image-name }}:${{ github.ref_name }} \
           KAS_CLONE_DEPTH=1 \
           ../../kas-container build kas.yml
       - name: Complete build and deploy ${{ matrix.image-name }} image
@@ -112,7 +113,7 @@ jobs:
             DEBIAN_TAG=${{ env.DEBIAN_TAG }}
           provenance: false
           outputs: type=registry,rewrite-timestamp=true
-          tags: ghcr.io/${{ github.repository }}/${{ matrix.image-name }}:next
+          tags: ghcr.io/${{ github.repository }}/${{ matrix.image-name }}:${{ github.ref_name }}
           annotations: ${{ env.DOCKER_METADATA_OUTPUT_ANNOTATIONS }}
       - name: Attest ${{ matrix.image-name }} image
         uses: actions/attest-build-provenance@v1

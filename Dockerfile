@@ -21,14 +21,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-ARG DEBIAN_TAG=bookworm-slim
+ARG DEBIAN_TAG=bullseye-slim
 
 FROM debian:${DEBIAN_TAG} as kas-base
 
 ARG SOURCE_DATE_EPOCH
 ARG CACHE_SHARING=locked
 
-ARG DEBIAN_TAG=bookworm-slim
+ARG DEBIAN_TAG=bullseye-slim
 ENV DEBIAN_BASE_IMAGE_TAG=${DEBIAN_TAG}
 
 ARG TARGETPLATFORM
@@ -39,8 +39,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=${CACHE_SHARING} \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-packages.conf && \
     if echo "${DEBIAN_TAG}" | grep -q "[0-9]"; then \
-        sed -i -e '/^URIs:/d' -e 's|^# http://snapshot\.|URIs: http://snapshot-cloudflare.|' \
-            /etc/apt/sources.list.d/debian.sources; \
+        sed -i -e '/^deb /d' -e 's|^# deb http://snapshot\.|deb http://snapshot-cloudflare.|' \
+            /etc/apt/sources.list; \
         echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/use-snapshot.conf; \
     fi && \
     apt-get update && \
@@ -48,10 +48,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=${CACHE_SHARING} \
     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
     apt-get install --no-install-recommends -y \
         python3-pip python3-setuptools python3-wheel python3-yaml python3-distro python3-jsonschema \
-        python3-newt python3-colorlog python3-kconfiglib python3-websockets \
+        python3-newt python3-colorlog python3-websockets \
         gosu lsb-release file vim less procps tree tar bzip2 zstd pigz lz4 unzip tmux libncurses-dev \
         git-lfs mercurial iproute2 ssh-client telnet curl rsync gnupg awscli sudo \
-        socat bash-completion python3-shtab python3-git && \
+        socat bash-completion python3-git && \
     rm -rf /var/log/* /tmp/* /var/tmp/* /var/cache/ldconfig/aux-cache && \
     rm -f /etc/gitconfig && \
     git config --system filter.lfs.clean 'git-lfs clean -- %f' && \
@@ -59,12 +59,18 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=${CACHE_SHARING} \
     git config --system filter.lfs.process 'git-lfs filter-process' && \
     git config --system filter.lfs.required true
 
+RUN pip3 --proxy=$https_proxy install \
+    --no-deps \
+    --no-build-isolation \
+    kconfiglib==14.1.0 \
+    shtab==1.7.1 && \
+    rm -rf $(pip3 cache dir)
+
 COPY . /kas
 
 RUN pip3 --proxy=$https_proxy install \
         --no-deps \
         --no-build-isolation \
-        --break-system-packages \
         /kas && \
     install -d /usr/local/share/bash-completion/completions/ && \
     shtab --shell=bash -u kas.kas.kas_get_argparser --error-unimportable --prog kas \
