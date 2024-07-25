@@ -294,6 +294,7 @@ class Menu:
             build_args.extra_bitbake_args = []
             build_args.skip = None
             build_args.provenance = False
+            build_args.apt_cacher = False
 
             Build().run(build_args)
 

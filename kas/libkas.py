@@ -450,6 +450,12 @@ def setup_parser_preserve_env_arg(parser):
                         action='store_true')
 
 
+def setup_apt_cacher_args(parser):
+    parser.add_argument('--apt-cacher',
+                        action='store_true',
+                        help='Enable apt-cacher-ng for the build (isar-only)')
+
+
 class ExtendConstAction(argparse._AppendConstAction):
     """Add an 'extend_const' action similar to 'append_const'.
 

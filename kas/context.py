@@ -105,6 +105,7 @@ class Context:
         self.repo_clone_depth = max(int(clone_depth), 0)
         self.setup_initial_environ()
         self.config = None
+        self.aptcacher = None
         self.args = args
 
     def setup_initial_environ(self):

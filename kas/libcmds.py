@@ -31,6 +31,7 @@ import pprint
 import configparser
 import json
 import base64
+import subprocess
 from git.config import GitConfigParser
 from .libkas import (ssh_cleanup_agent, ssh_setup_agent, ssh_no_host_key_check,
                      get_build_environ, repos_fetch, repos_apply_patches)
@@ -375,6 +376,47 @@ class CleanupSSHAgent(Command):
 
     def execute(self, ctx):
         ssh_cleanup_agent()
+
+
+class SetupAptCacherNG(Command):
+    """
+        Sets up the apt-cacher-ng proxy.
+    """
+
+    def __str__(self) -> str:
+        return 'setup_apt_cacher_ng'
+
+    def execute(self, ctx):
+        if ctx.config.get_build_system() != 'isar':
+            raise RuntimeError('apt-cacher-ng setup is only supported for '
+                               'ISAR builds')
+
+        aptcacher_tool = "/usr/sbin/apt-cacher-ng"
+        if shutil.which(aptcacher_tool) is None:
+            raise RuntimeError('apt-cacher-ng setup requested but could '
+                               f'not find "{aptcacher_tool}"')
+
+        cache_dir = ctx.build_dir + '/downloads/apt-cacher-ng'
+        os.makedirs(cache_dir, exist_ok=True)
+        ctx.aptcacher = subprocess.Popen(
+            ['/usr/bin/sudo', aptcacher_tool,
+             '-c', '/etc/apt-cacher-ng',
+             'ForeGround=1', f'CacheDir={cache_dir}'],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        logging.info('Providing internal apt-cacher-ng')
+
+
+class CleanupAptCacherNG(Command):
+    """
+        Stops the apt-cacher-ng proxy.
+    """
+
+    def __str__(self) -> str:
+        return 'cleanup_apt_cacher_ng'
+
+    def execute(self, ctx):
+        if ctx.aptcacher:
+            ctx.aptcacher.terminate()
 
 
 class SetupEnviron(Command):
