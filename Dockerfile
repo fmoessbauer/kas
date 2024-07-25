@@ -113,7 +113,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=${CACHE_SHARING} \
             pristine-tar sbuild schroot zstd \
             umoci skopeo \
             python3-botocore \
-            debootstrap && \
+            debootstrap apt-cacher-ng && \
     rm -rf /var/log/* /tmp/* /var/tmp/* /var/cache/ldconfig/aux-cache && \
     sbuild-adduser builder && \
     sed -i 's|# kas-isar: ||g' /container-entrypoint
