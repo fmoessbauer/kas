@@ -133,7 +133,8 @@ async def run_cmd_async(cmd, cwd, env=None, fail=True, liveupdate=False):
             cwd=cwd,
             env=env,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE)
+            stderr=asyncio.subprocess.PIPE,
+            preexec_fn=os.setpgrp)
     except FileNotFoundError as ex:
         if fail:
             raise ex
@@ -147,8 +148,33 @@ async def run_cmd_async(cmd, cwd, env=None, fail=True, liveupdate=False):
         asyncio.ensure_future(_read_stream(process.stdout, logo.log_stdout)),
         asyncio.ensure_future(_read_stream(process.stderr, logo.log_stderr))
     ]
-    await asyncio.wait(tasks)
-    ret = await process.wait()
+
+    # Process termination is a complicated thing. We need to ensure that
+    # the event event-loop ThreadedChildWatcher thread fires before the
+    # loop is terminated. When running kas standalone, an improper cleanup
+    # is not critical, as the os takes care of tearing everything down.
+    # However, when running kas in a pytest environment, the cleanup needs
+    # to happen correctly as otherwise the environment for the next test
+    # execution is polluted.
+    # The best we can do it to ask the process to terminate (SIGINT) and
+    # wait for it. If it does not terminate within a certain time, we kill
+    # it. After killing, we MUST wait until all cleanup handlers have been
+    # called. For details, see
+    # https://github.com/pytest-dev/pytest-asyncio/issues/708#issuecomment-1868488942
+    try:
+        await asyncio.gather(*tasks)
+        ret = await process.wait()
+    except asyncio.CancelledError:
+        process.send_signal(signal.SIGINT)
+        logging.debug('Command "%s" cancelled', cmdstr)
+        try:
+            await asyncio.wait_for(process.wait(), timeout=5)
+        except asyncio.TimeoutError:
+            logging.warning('Command "%s" did not terminate after timeout, '
+                            'kill it', cmdstr)
+            process.kill()
+            await process.wait()
+        raise
 
     if ret and fail:
         msg = f'Command "{cwd}$ {cmdstr}" failed'

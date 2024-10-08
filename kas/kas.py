@@ -78,9 +78,11 @@ def create_logger():
 
 def interruption():
     """
-        Ignore SIGINT/SIGTERM in kas, let them be handled by our sub-processes
+        Gracefully cancel all tasks in the event loop
     """
-    pass
+    loop = asyncio.get_event_loop()
+    for task in asyncio.all_tasks(loop):
+        task.cancel()
 
 
 def _atexit_handler():
@@ -196,6 +198,8 @@ def kas(argv):
             plugin.run(args)
         else:
             parser.print_help()
+    except asyncio.CancelledError:
+        logging.error('kas execution cancelled')
     finally:
         loop.close()
 
