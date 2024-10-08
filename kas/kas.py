@@ -76,6 +76,15 @@ def create_logger():
     return logging.getLogger(__name__)
 
 
+def cleanup_logger():
+    """
+        Cleanup the logging environment
+    """
+    for handler in logging.root.handlers[:]:
+        if isinstance(handler, logging.StreamHandler):
+            logging.root.removeHandler(handler)
+
+
 def interruption():
     """
         Gracefully cancel all tasks in the event loop
@@ -197,10 +206,20 @@ def kas(argv):
             plugin.run(args)
         else:
             parser.print_help()
+    except CommandExecError as err:
+        logging.error('%s', err)
+        raise
+    except KasUserError as err:
+        logging.error('%s', err)
+        raise
     except asyncio.CancelledError:
         logging.error('kas execution cancelled')
+    except Exception as err:
+        logging.error('%s', err)
+        raise
     finally:
         loop.close()
+        cleanup_logger()
 
 
 def main():
@@ -211,13 +230,10 @@ def main():
     try:
         kas(sys.argv[1:])
     except CommandExecError as err:
-        logging.error('%s', err)
         sys.exit(err.ret_code if err.forward else 2)
-    except KasUserError as err:
-        logging.error('%s', err)
+    except KasUserError:
         sys.exit(2)
-    except Exception as err:
-        logging.error('%s', err)
+    except Exception:
         traceback.print_exc()
         sys.exit(1)
 
