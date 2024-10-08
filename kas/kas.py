@@ -182,18 +182,22 @@ def kas(argv):
 
     logging.info('%s %s started', os.path.basename(sys.argv[0]), __version__)
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, interruption)
     atexit.register(_atexit_handler)
 
-    plugin_class = plugins.get(args.cmd)
-    if plugin_class:
-        plugin = plugin_class()
-        plugin.run(args)
-    else:
-        parser.print_help()
+    try:
+        plugin_class = plugins.get(args.cmd)
+        if plugin_class:
+            plugin = plugin_class()
+            plugin.run(args)
+        else:
+            parser.print_help()
+    finally:
+        loop.close()
 
 
 def main():
