@@ -48,7 +48,11 @@ elif [ "$USER_ID" = 0 ]; then
 else
 	GROUP_ID=${GROUP_ID:-$(id -g)}
 
-	groupmod -o --gid "$GROUP_ID" builder
+	groupmod --gid "$GROUP_ID" builder >/dev/null 2>&1
+	ret=$?
+	if [ $ret -ne 0 ] && [ $ret -ne 4 ]; then
+		echo "Unable to create group ID $GROUP_ID: Error Code $ret" >&2
+	fi
 	usermod -o --uid "$USER_ID" --gid "$GROUP_ID" builder >/dev/null
 	chown -R "$USER_ID":"$GROUP_ID" /builder
 	# copy host SSH config into home of builder
