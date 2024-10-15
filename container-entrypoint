@@ -35,6 +35,42 @@ may also need to update the host distribution (e.g. Debian Jessie -> Stretch).
 EOF
 fi
 
+setup_ids()
+{
+	groupmod --gid "$2" builder >/dev/null 2>&1
+	ret=$?
+	if [ $ret -ne 0 ] && [ $ret -ne 4 ]; then
+		echo "Unable to create group ID $2: Error Code $ret" >&2
+	fi
+
+	EXIST_USER=$(id -un "$1" 2> /dev/null)
+	if [ -n "$EXIST_USER" ]; then
+		cat <<EOF >&2
+WARNING: user ID $1 exists already in container.
+Querying the current user will either return \"builder\" or \"$EXIST_USER\".
+Build failures are expected!
+EOF
+	fi
+	usermod -o --uid "$1" --gid "$2" builder >/dev/null
+	chown -R "$1":"$2" /builder
+
+	shift 2
+
+	for GID in "$@"; do
+		# Add supplementary groups and skip existing ones
+		groupadd -g "$GID" "g$GID" >/dev/null 2>&1
+		ret=$?
+		if [ $ret -ne 0 ] && [ $ret -ne 4 ]; then
+			echo "Unable to create group ID $GID: Error Code $ret" >&2
+		fi
+	done
+
+	GIDLIST=$(echo "$@" | tr ' ' ',')
+	if [ -n "$GIDLIST" ]; then
+		usermod -a -G "$GIDLIST" builder
+	fi
+}
+
 if [ -z "$USER_ID" ]; then
 	# Not a kas-container call
 	GOSU=""
@@ -46,24 +82,12 @@ elif [ "$USER_ID" = 0 ]; then
 	# We shall run everything as root
 	GOSU=""
 else
-	GROUP_ID=${GROUP_ID:-$(id -g)}
+	GROUP_IDS=${GROUP_IDS:-$(id -G)}
 
-	groupmod --gid "$GROUP_ID" builder >/dev/null 2>&1
-	ret=$?
-	if [ $ret -ne 0 ] && [ $ret -ne 4 ]; then
-		echo "Unable to create group ID $GROUP_ID: Error Code $ret" >&2
-	fi
+	# SC2086: Double quote to prevent globbing and word splitting.
+	# shellcheck disable=2086
+	setup_ids $USER_ID $GROUP_IDS
 
-	EXIST_USER=$(id -un "$USER_ID" 2> /dev/null)
-	if [ -n "$EXIST_USER" ]; then
-		cat <<EOF >&2
-WARNING: user ID $USER_ID exists already in container.
-Querying the current user will either return \"builder\" or \"$EXIST_USER\".
-Build failures are expected!
-EOF
-	fi
-	usermod -o --uid "$USER_ID" --gid "$GROUP_ID" builder >/dev/null
-	chown -R "$USER_ID":"$GROUP_ID" /builder
 	# copy host SSH config into home of builder
 	if [ -d /var/kas/userdata/.ssh ]; then
 		cp -a /var/kas/userdata/.ssh /builder/
