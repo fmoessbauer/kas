@@ -53,6 +53,15 @@ else
 	if [ $ret -ne 0 ] && [ $ret -ne 4 ]; then
 		echo "Unable to create group ID $GROUP_ID: Error Code $ret" >&2
 	fi
+
+	EXIST_USER=$(id -un "$USER_ID" 2> /dev/null)
+	if [ -n "$EXIST_USER" ]; then
+		cat <<EOF >&2
+WARNING: user ID $USER_ID exists already in container.
+Querying the current user will either return \"builder\" or \"$EXIST_USER\".
+Build failures are expected!
+EOF
+	fi
 	usermod -o --uid "$USER_ID" --gid "$GROUP_ID" builder >/dev/null
 	chown -R "$USER_ID":"$GROUP_ID" /builder
 	# copy host SSH config into home of builder
