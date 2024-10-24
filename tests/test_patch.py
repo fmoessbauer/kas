@@ -78,7 +78,6 @@ def test_patch_update(monkeykas, tmpdir, mercurial):
     """
     tdir = str(tmpdir / 'test_patch_update')
     shutil.copytree('tests/test_patch', tdir)
-    cwd = os.getcwd()
     monkeykas.chdir(tdir)
 
     repo = mercurial(tmpdir, 'example')
@@ -92,7 +91,6 @@ def test_patch_update(monkeykas, tmpdir, mercurial):
     kas.kas(['shell', 'test2.yml', '-c', 'true'])
     for f in ['kas/tests/test_patch/hello.sh', 'hello/hello.sh']:
         assert os.stat(f)[stat.ST_MODE] & stat.S_IXUSR
-    os.chdir(cwd)
 
 
 @pytest.mark.online
