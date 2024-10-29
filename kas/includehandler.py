@@ -148,6 +148,7 @@ class IncludeHandler:
         self.top_files = top_files
         self.top_repo_path = top_repo_path
         self.use_lock = use_lock
+        self.config_files = []
 
     def get_lock_filename(self, kasfile=None):
         """
@@ -155,6 +156,13 @@ class IncludeHandler:
         """
         file = Path(kasfile or self.top_files[0])
         return file.parent / (file.stem + '.lock' + file.suffix)
+
+    def get_lockfiles(self):
+        """
+        Returns a list of lockfiles in the order the configuration
+        files were parsed.
+        """
+        return list(filter(lambda x: x.is_lockfile, self.config_files))
 
     def get_top_repo_path(self):
         return self.top_repo_path
@@ -203,10 +211,9 @@ class IncludeHandler:
             configs = []
             try:
                 current_config = ConfigFile.load(filename, is_lockfile)
-                # if lockfile exists and locking, inject it after current file
+                # if lockfile exists, inject it after current file
                 lockfile = self.get_lock_filename(filename)
-                if self.use_lock and Path(lockfile).exists():
-                    logging.debug('append lockfile %s', lockfile)
+                if Path(lockfile).exists():
                     (cfg, rep) = _internal_include_handler(
                         lockfile,
                         repo_path,
@@ -273,6 +280,7 @@ class IncludeHandler:
                         missing_repos.extend(rep)
                     else:
                         missing_repos.append(includerepo)
+            logging.debug('config file %s', current_config.filename)
             configs.append(current_config)
             # Remove all possible duplicates in missing_repos
             missing_repos = list(OrderedDict.fromkeys(missing_repos))
@@ -313,16 +321,30 @@ class IncludeHandler:
                     dest[k] = upd[k]
             return dest
 
-        configs = []
+        config_files = []
         missing_repos = []
         for configfile in self.top_files:
             cfgs, reps = _internal_include_handler(configfile,
                                                    self.top_repo_path)
-            configs.extend(cfgs)
+            config_files.extend(cfgs)
             for repo in reps:
                 if repo not in missing_repos:
                     missing_repos.append(repo)
 
+        config_files_active = config_files
+        if not self.use_lock:
+            config_files_active = \
+                filter(lambda x: not x.is_lockfile, config_files)
+
+        # on merging, the order (and duplications) of the configs matter
         config = functools.reduce(_internal_dict_merge,
-                                  map(lambda x: x.config, configs))
+                                  map(lambda x: x.config, config_files_active))
+        # for tracking, we don't want to have duplicates, but the order matters
+        self.config_files = []
+        for cf in config_files:
+            if cf.filename not in [x.filename for x in self.config_files]:
+                self.config_files.append(cf)
+        logging.debug('config files %s',
+                      [str(x.filename) for x in self.config_files])
+
         return config, missing_repos
