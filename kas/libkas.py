@@ -456,6 +456,15 @@ def setup_apt_cacher_args(parser):
                         help='Enable apt-cacher-ng for the build (isar-only)')
 
 
+def setup_squid_args(parser):
+    parser.add_argument('--squid',
+                        action='store_true',
+                        help='Enable internal squid http cache')
+    parser.add_argument('--squid-snapshot-rate',
+                        type=int,
+                        help='Rate limit access to snapshot mirrors in KB/s')
+
+
 class ExtendConstAction(argparse._AppendConstAction):
     """Add an 'extend_const' action similar to 'append_const'.
 

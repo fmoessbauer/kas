@@ -44,11 +44,13 @@ from kas.context import create_global_context
 from kas.config import Config
 from kas.libcmds import Macro, Command, SetupHome, \
     SetupAptCacherNG, CleanupAptCacherNG
+from kas.squid import SetupSquid, CleanupSquid
 from kas.libkas import setup_parser_common_args, \
     setup_parser_keep_config_unchanged_arg, \
     setup_parser_preserve_env_arg, \
     run_handle_preserve_env_arg, \
-    setup_apt_cacher_args
+    setup_apt_cacher_args, \
+    setup_squid_args
 from kas.kasusererror import CommandExecError
 
 __license__ = 'MIT'
@@ -71,6 +73,7 @@ class Shell:
 
         setup_parser_common_args(parser)
         setup_apt_cacher_args(parser)
+        setup_squid_args(parser)
         setup_parser_preserve_env_arg(parser)
         setup_parser_keep_config_unchanged_arg(parser)
         parser.add_argument('-c', '--command',
@@ -91,6 +94,9 @@ class Shell:
         if args.apt_cacher:
             macro.setup_commands.append((SetupAptCacherNG(),
                                          CleanupAptCacherNG()))
+        if args.squid:
+            macro.setup_commands.append((SetupSquid(),
+                                         CleanupSquid()))
         macro.add(ShellCommand(args.command))
         macro.run(ctx, args.skip)
 

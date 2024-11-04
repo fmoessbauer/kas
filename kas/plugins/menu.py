@@ -295,6 +295,7 @@ class Menu:
             build_args.skip = None
             build_args.provenance = False
             build_args.apt_cacher = False
+            build_args.squid = False
 
             Build().run(build_args)
 
