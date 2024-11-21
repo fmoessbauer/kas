@@ -454,6 +454,17 @@ if [ "$(id -u)" -eq 0 ] && [ "${KAS_ALLOW_ROOT}" != "yes" ] ; then
 	            "KAS_ALLOW_ROOT=yes to override."
 fi
 
+if git_com_dir=$(git -C "${KAS_REPO_DIR}" rev-parse --git-common-dir 2>/dev/null) \
+	&& [ "$git_com_dir" != "$(git -C "${KAS_REPO_DIR}" rev-parse --git-dir 2>/dev/null)" ]; then
+	# If (it's a git repo) and the common dir isn't the git-dir, it is shared worktree and
+	# we have to mount the common dir in the container to make git work
+	# The mount path inside the container is different from the host path. Hence, we over-mount
+	# the .git file to point to the correct path.
+	git_overlay_file=$(mktemp)
+	sed "s|gitdir: ${git_com_dir}/|gitdir: /repo-common/|" "${KAS_REPO_DIR}/.git" > "${git_overlay_file}"
+	set -- "$@" -v "${git_com_dir}:/repo-common:${KAS_REPO_MOUNT_OPT}" -v "${git_overlay_file}:/repo/.git:ro"
+fi
+
 set -- "$@" -v "${KAS_REPO_DIR}:/repo:${KAS_REPO_MOUNT_OPT}" \
 	-v "${KAS_WORK_DIR}":/work:rw -e KAS_WORK_DIR=/work \
 	-v "${KAS_BUILD_DIR}":/build:rw \
@@ -609,3 +620,8 @@ done
 
 # shellcheck disable=SC2086
 trace ${KAS_CONTAINER_COMMAND} run "$@"
+
+# cleanup
+if [ -f "${git_overlay_file}" ]; then
+	trace rm -f "${git_overlay_file}"
+fi
