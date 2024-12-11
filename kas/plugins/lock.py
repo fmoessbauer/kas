@@ -128,7 +128,8 @@ class Lock(Checkout):
             logging.info('Creating lockfile %s', lockfile_rel)
         output = IoTarget(target=lockfile.filename, managed=True)
         format = "json" if lockfile.filename.suffix == '.json' else "yaml"
-        Dump.dump_config(lockfile_config, output, format, args.indent)
+        Dump.dump_config(lockfile_config, output, format, args.indent,
+                         args.sort)
         return repos_to_lock
 
     def run(self, args):
