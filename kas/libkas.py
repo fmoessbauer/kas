@@ -177,9 +177,10 @@ async def run_cmd_async(cmd, cwd, env=None, fail=True, liveupdate=False):
     return (ret, ''.join(logo.stdout))
 
 
-def run_cmd(cmd, cwd, env=None, fail=True):
+def _run_cmd(cmd, cwd, env=None, fail=True):
     """
-        Runs a command synchronously.
+        Runs a command synchronously and captures
+        stdout and stderr.
     """
     env = env or get_context().environ
     cmdstr = ' '.join(cmd)
@@ -192,12 +193,24 @@ def run_cmd(cmd, cwd, env=None, fail=True):
     except FileNotFoundError as ex:
         if fail:
             raise ex
-        return (errno.ENOENT, str(ex))
+        return (errno.ENOENT, str(ex), None)
     except PermissionError as ex:
         if fail:
             raise ex
-        return (errno.EPERM, str(ex))
-    return (ret.returncode, ret.stdout.decode('utf-8'))
+        return (errno.EPERM, str(ex), None)
+    return (ret.returncode,
+            ret.stdout.decode('utf-8'),
+            ret.stderr.decode('utf-8'))
+
+
+def run_cmd(cmd, cwd, env=None, fail=True, catch_stderr=False):
+    """
+        Runs a command synchronously.
+    """
+    ret, out, err = _run_cmd(cmd, cwd, env, fail)
+    if catch_stderr:
+        return (ret, out, err)
+    return (ret, out)
 
 
 def find_program(paths, name):
