@@ -97,7 +97,8 @@ setup(
         'jsonschema>=2.5.0,<5',
         'kconfiglib>=14.1.0,<15',
         'GitPython>=3.1.0,<4',
-        "cached-property>=1.0,<2; python_version<'3.8'"
+        "cached-property>=1.0,<2; python_version<'3.8'",
+        "python-gnupg>=0.4.0",
     ],
 
     # At least python 3.6 is needed by now:

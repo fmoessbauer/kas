@@ -104,6 +104,7 @@ class Context:
             raise KasUserError('KAS_CLONE_DEPTH must be a number')
         self.repo_clone_depth = max(int(clone_depth), 0)
         self.setup_initial_environ()
+        self.keyhandler = {}
         self.config = None
         self.args = args
 
