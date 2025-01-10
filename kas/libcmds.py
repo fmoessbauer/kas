@@ -83,6 +83,7 @@ class Macro:
                 ReposCheckout(),
                 ReposCheckSignatures(),
                 ReposApplyPatches(),
+                ReposCreateLinks(),
                 SetupEnviron(),
                 WriteBBConfig(),
             ]]
@@ -652,3 +653,16 @@ class ReposCheckSignatures(Command):
 
             raise RepoRefError(f'Repository {repo.name} is not signed '
                                'with a trusted key.')
+
+
+class ReposCreateLinks(Command):
+    """
+        Creates the links defined in the configuration.
+    """
+
+    def __str__(self):
+        return 'repos_create_links'
+
+    def execute(self, ctx):
+        for repo in ctx.config.get_repos():
+            repo.create_links()

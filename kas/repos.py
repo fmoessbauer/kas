@@ -97,7 +97,7 @@ class Repo:
     """
 
     def __init__(self, name, url, path, commit, tag, branch, refspec, layers,
-                 patches, signers, disable_operations):
+                 patches, signers, linkfiles, disable_operations):
         self.name = name
         self.url = url
         self.path = path
@@ -108,6 +108,7 @@ class Repo:
         self._layers = layers
         self._patches = patches
         self.allowed_signers = signers
+        self.linkfiles = linkfiles
         self.operations_disabled = disable_operations
 
         if not self.url:
@@ -268,6 +269,7 @@ class Repo:
 
         url = repo_config.get('url', None)
         name = repo_config.get('name', name)
+        linkfiles = repo_config.get('linkfiles', [])
         repo_type = repo_config.get('type', 'git')
         commit = repo_config.get('commit', None)
         tag = repo_config.get('tag', repo_defaults.get('tag', None))
@@ -329,13 +331,15 @@ class Repo:
                     f'{commit} is not a full-length hash for repo '
                     f'"{name}". This will be an error in future versions.')
             return GitRepo(name, url, path, commit, tag, branch, refspec,
-                           layers, patches, signers, disable_operations)
+                           layers, patches, signers, linkfiles,
+                           disable_operations)
         if repo_type == 'hg':
             if not shutil.which('hg'):
                 raise UnsupportedRepoTypeError(
                     'hg is required for Mercurial repositories')
             return MercurialRepo(name, url, path, commit, tag, branch, refspec,
-                                 layers, patches, signers, disable_operations)
+                                 layers, patches, signers, linkfiles,
+                                 disable_operations)
         raise UnsupportedRepoTypeError(f'Repo type "{repo_type}" '
                                        'not supported.')
 
@@ -619,6 +623,20 @@ class RepoImpl(Repo):
         if self.url and self.commit:
             logging.debug('Repository %s resolved to %s @ %s',
                           self.name, self.url, self.commit)
+
+    def create_links(self):
+        workdir = get_context().kas_work_dir
+        for link in self.linkfiles:
+            src = os.path.join(self.path, link['src'])
+            dst = os.path.join(workdir, link['dest'])
+            if not os.path.exists(src):
+                raise FileNotFoundError(f'Link target "{src}" not found')
+            # TODO: create intermediate directories if needed
+            if os.path.exists(dst):
+                continue
+            os.symlink(src, dst)
+            logging.info('Repository %s: Created link: %s -> %s',
+                         self.name, link['src'], link['dest'])
 
 
 class GitRepo(RepoImpl):
