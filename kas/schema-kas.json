@@ -294,6 +294,27 @@
                                         }
                                     ]
                                 }
+                            },
+                            "linkfiles": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "src",
+                                        "dest"
+                                    ],
+                                    "properties": {
+                                        "src": {
+                                            "description": "Path relative to the project root.",
+                                            "type": "string"
+                                        },
+                                        "dest": {
+                                            "description": "The symlink is created at this path, relative to the repository root.",
+                                            "type": "string"
+                                        }
+                                    }
+                                }
                             }
                         }
                     },
