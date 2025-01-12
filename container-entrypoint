@@ -35,13 +35,18 @@ may also need to update the host distribution (e.g. Debian Jessie -> Stretch).
 EOF
 fi
 
+git_disable_safe_dir() {
+	# allow git to operate on non-owned directories
+	sudo git config --system safe.directory "*"
+}
+
 if [ -z "$USER_ID" ]; then
 	# Not a kas-container call
 	GOSU=""
 
 	# Work around gitlab-runner not aligning checked out repo ownership
 	# with our builder user
-	sudo git config --system safe.directory "*"
+	git_disable_safe_dir
 elif [ "$USER_ID" = 0 ]; then
 	# We shall run everything as root
 	GOSU=""
@@ -57,6 +62,24 @@ else
 	fi
 
 	GOSU="gosu builder"
+fi
+# kas-container on rootless docker workaround
+if [ -n "$USER_ID" ] && [ "$USER_ID" -ne 0 ] && \
+   [ "$KAS_DOCKER_ROOTLESS" = "1" ] && [ "$(stat -c %u /repo)" -eq 0 ]; then
+	# Docker rootless does not support keeping the user namespace
+	# (podman option --userns=keep-id). By that, the bind mounts
+	# are owned by root.
+	git_disable_safe_dir
+	_CHOWN_DIRS="/work /build"
+	if [ -d "/sstate" ]; then
+		_CHOWN_DIRS="$_CHOWN_DIRS /sstate"
+	fi
+	if [ -d "/downloads" ]; then
+		_CHOWN_DIRS="$_CHOWN_DIRS /downloads"
+	fi
+	# SC2086: Double quote to prevent globbing and word splitting.
+	# shellcheck disable=2086
+	sudo chown "$USER_ID":"$GROUP_ID" $_CHOWN_DIRS
 fi
 
 if [ "$PWD" = / ]; then

@@ -128,6 +128,12 @@ enable_isar_mode()
 		KAS_CONTAINER_COMMAND="sudo --preserve-env ${KAS_CONTAINER_COMMAND}"
 		# preserved user PATH may lack sbin needed by privileged podman
 		export PATH="${PATH}:/usr/sbin"
+	elif [ "${KAS_DOCKER_ROOTLESS}" = "1" ]; then
+		export DOCKER_HOST="${DOCKER_HOST:-unix:///var/run/docker.sock}"
+		debug "kas-isar does not support rootless docker. Using system docker"
+		# force use of well-known system docker socket
+		KAS_CONTAINER_COMMAND="sudo --preserve-env ${KAS_CONTAINER_COMMAND}"
+		KAS_DOCKER_ROOTLESS=0
 	fi
 }
 
@@ -155,6 +161,29 @@ enable_unpriv_userns_docker()
 	fi
 }
 
+check_docker_rootless()
+{
+	KAS_DOCKER_ROOTLESS=0
+	if [ "$(docker context show)" = "rootless" ]; then
+		KAS_DOCKER_ROOTLESS=1
+	fi
+}
+
+enable_docker_rootless()
+{
+	warning "Rootless docker used, only limited functionality available."
+	if [ "${KAS_WORK_DIR}" = "${KAS_REPO_DIR}" ]; then
+		fatal_error "Docker rootless requires an exclusive KAS_WORK_DIR."
+	fi
+	if [ -n "${KAS_REPO_REF_DIR}" ]; then
+		fatal_error "Docker rootless does not support KAS_REPO_REF_DIR."
+	fi
+	if [ "${KAS_REPO_MOUNT_OPT}" = "rw" ]; then
+		fatal_error "Docker rootless requires read-only repo. Run with \"--repo-ro\"."
+	fi
+	KAS_RUNTIME_ARGS="${KAS_RUNTIME_ARGS} -e KAS_DOCKER_ROOTLESS=1"
+}
+
 run_clean()
 {
 	if [ -n "${KAS_ISAR_ARGS}" ]; then
@@ -177,6 +206,33 @@ run_clean()
 			trace rm -rf "${DL_DIR}"
 		fi
 	fi
+}
+
+run_clean_rootless() {
+	# In rootless mode, we must call the clean commands inside the container.
+	# If dirs are mounted, we must only clean their content.
+	_CLEAN_CMD="rm -rf /build/tmp"
+	_MOUNT_ARGS="-v ${KAS_BUILD_DIR}:/build:rw"
+	if [ "$1" = "cleansstate" ] || [ "$1" = "cleanall" ]; then
+		if [ -n "${SSTATE_DIR}" ]; then
+			_MOUNT_ARGS="${_MOUNT_ARGS} -v ${SSTATE_DIR}:/sstate:rw"
+			_CLEAN_CMD="${_CLEAN_CMD};rm -rf /sstate/*;chown 0:0 /sstate"
+		else
+			_CLEAN_CMD="${_CLEAN_CMD};rm -rf /build/sstate-cache"
+		fi
+	fi
+	if [ "$1" = "cleanall" ]; then
+		if [ -n "${DL_DIR}" ]; then
+			_MOUNT_ARGS="${_MOUNT_ARGS} -v ${DL_DIR}:/downloads:rw"
+			_CLEAN_CMD="${_CLEAN_CMD};rm -rf /downloads/*;chown 0:0 /downloads"
+		else
+			_CLEAN_CMD="${_CLEAN_CMD};rm -rf /build/downloads"
+		fi
+	fi
+	# SC2086: Double quote to prevent globbing and word splitting.
+	# shellcheck disable=2086
+	trace ${KAS_CONTAINER_COMMAND} run ${_MOUNT_ARGS} --user=root \
+		--rm ${KAS_CONTAINER_IMAGE} /bin/bash -c "${_CLEAN_CMD}"
 }
 
 KAS_GIT_OVERLAY_FILE=""
@@ -233,6 +289,7 @@ case "${KAS_CONTAINER_ENGINE}" in
 docker)
 	KAS_CONTAINER_COMMAND="docker"
 	enable_unpriv_userns_docker
+	check_docker_rootless
 	;;
 podman)
 	KAS_CONTAINER_COMMAND="podman"
@@ -477,7 +534,11 @@ set_container_image_var
 # short circuit for clean* commands. We just need
 # the build-system information, but no repo mounts, etc...
 if echo "${KAS_CMD}" | grep -qe "^clean"; then
-	run_clean "${KAS_CMD}"
+	if [ "${KAS_DOCKER_ROOTLESS}" = "1" ]; then
+		run_clean_rootless "${KAS_CMD}"
+	else
+		run_clean "${KAS_CMD}"
+	fi
 	exit 0
 fi
 
@@ -489,6 +550,10 @@ if [ "$(id -u)" -eq 0 ] && [ "${KAS_ALLOW_ROOT}" != "yes" ] ; then
 	fatal_error "Running as root - may break certain recipes." \
 	            "Better give a regular user docker access. Set" \
 	            "KAS_ALLOW_ROOT=yes to override."
+fi
+
+if [ "${KAS_DOCKER_ROOTLESS}" = "1" ]; then
+	enable_docker_rootless
 fi
 
 set -- "$@" -v "${KAS_REPO_DIR}:/repo:${KAS_REPO_MOUNT_OPT}" \
