@@ -35,13 +35,33 @@ may also need to update the host distribution (e.g. Debian Jessie -> Stretch).
 EOF
 fi
 
+git_disable_safe_dir()
+{
+	# allow git to operate on non-owned directories
+	sudo git config --system safe.directory "*"
+}
+
+chown_managed_dirs()
+{
+	for DIR in /build /work /sstate /downloads /repo-ref; do
+		if [ -d "$DIR" ]; then
+			chown -R "$1":"$2" "$DIR"
+		fi
+	done
+}
+
+restore_managed_dirs_owner()
+{
+	chown_managed_dirs 0 0
+}
+
 if [ -z "$USER_ID" ]; then
 	# Not a kas-container call
 	GOSU=""
 
 	# Work around gitlab-runner not aligning checked out repo ownership
 	# with our builder user
-	sudo git config --system safe.directory "*"
+	git_disable_safe_dir
 elif [ "$USER_ID" = 0 ]; then
 	# We shall run everything as root
 	GOSU=""
@@ -58,6 +78,15 @@ else
 
 	GOSU="gosu builder"
 fi
+# kas-container on rootless docker workaround
+if [ -n "$USER_ID" ] && [ "$USER_ID" -ne 0 ] && \
+   [ "$KAS_DOCKER_ROOTLESS" = "1" ] && [ "$(stat -c %u /repo)" -eq 0 ]; then
+	# Docker rootless does not support keeping the user namespace
+	# (podman option --userns=keep-id). By that, the bind mounts
+	# are owned by root.
+	git_disable_safe_dir
+	chown_managed_dirs "$USER_ID" "$GROUP_ID"
+fi
 
 if [ "$PWD" = / ]; then
 	cd /builder || exit 1
@@ -66,9 +95,17 @@ fi
 if [ -n "$1" ]; then
 	case "$1" in
 	build|checkout|clean*|dump|for-all-repos|lock|menu|purge|shell|-*)
-		# SC2086: Double quote to prevent globbing and word splitting.
-		# shellcheck disable=2086
-		exec $GOSU kas "$@"
+		# We must only restore the dir owner if it is empty, however
+		# we cannot reliably distinguish between kas commands. Hence
+		# we need a hint from the kas-container script.
+		if [ "$KAS_DOCKER_ROOTLESS_PURGE" = "1" ]; then
+			trap restore_managed_dirs_owner EXIT INT TERM
+			$GOSU kas "$@"
+		else
+			# SC2086: Double quote to prevent globbing and word splitting.
+			# shellcheck disable=2086
+			exec $GOSU kas "$@"
+		fi
 		;;
 	*)
 		# SC2086: Double quote to prevent globbing and word splitting.
