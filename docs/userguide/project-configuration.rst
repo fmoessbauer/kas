@@ -180,6 +180,11 @@ If this is found, kas loads this file right after processing the current one.
 Note, that this applies to both files on the kas cmdline, as well as included
 files.
 
+When performing any kas operation with ``--update``, kas will not load the
+lockfiles of the local repository. By that, the repos can be checked out to
+the latest version and later the lockfiles can be regenerated (e.g. by the
+``lock`` plugin).
+
 The following example shows this mechanism for a file ``kas/kas-isar.yml``
 and its corresponding lockfile ``kas/kas-isar.lock.yml``.
 

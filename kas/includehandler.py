@@ -341,7 +341,10 @@ class IncludeHandler:
 
         config_files = self.config_files
         if not self.use_lock:
-            config_files = [x for x in config_files if not x.is_lockfile]
+            # remove all local lockfiles from the list.
+            # remote locks cannot be updated, hence keep them
+            config_files = [x for x in config_files
+                            if x.is_external or not x.is_lockfile]
 
         config = functools.reduce(_internal_dict_merge,
                                   map(lambda x: x.config, config_files))
