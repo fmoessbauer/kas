@@ -41,7 +41,7 @@ usage()
 	printf "%b" "Usage: ${SELF} [OPTIONS] { build | shell } [KASOPTIONS] [KASFILE]\n"
 	printf "%b" "       ${SELF} [OPTIONS] { checkout | dump | lock } [KASOPTIONS] [KASFILE]\n"
 	printf "%b" "       ${SELF} [OPTIONS] for-all-repos [KASOPTIONS] [KASFILE] COMMAND\n"
-	printf "%b" "       ${SELF} [OPTIONS] { clean | cleansstate | cleanall } [KASFILE]\n"
+	printf "%b" "       ${SELF} [OPTIONS] { clean | cleansstate | cleanall | prune } [KASFILE]\n"
 	printf "%b" "       ${SELF} [OPTIONS] menu [KCONFIG]\n"
 	printf "%b" "\nPositional arguments:\n"
 	printf "%b" "build\t\t\tCheck out repositories and build target.\n"
@@ -57,6 +57,8 @@ usage()
 		    "keep downloads.\n"
 	printf "%b" "cleanall\t\tClean build artifacts, sstate cache and " \
 		    "downloads.\n"
+	printf "%b" "prune\t\t\tClean build artifacts, sstate cache, downloads and (if set)\n"
+	printf "%b" "     \t\t\tKAS_{BUILD_DIR,WORK_DIR,REPO_REF_DIR}. Use with care.\n"
 	printf "%b" "menu\t\t\tProvide configuration menu and trigger " \
 		    "configured build.\n"
 	printf "%b" "\nOptional arguments:\n"
@@ -197,13 +199,21 @@ run_clean()
 		trace rm -rf "${KAS_BUILD_DIR}"/tmp*
 	fi
 
-	if [ "$1" != "clean" ]; then
+	if [ "$1" = "cleansstate" ] || [ "$1" = "cleanall" ] || [ "$1" = "prune" ]; then
 		SSTATE_DIR=${SSTATE_DIR:-${KAS_BUILD_DIR}/sstate-cache}
 		trace rm -rf "${SSTATE_DIR}"
-
-		if [ "$1" = "cleanall" ]; then
-			DL_DIR=${DL_DIR:-${KAS_BUILD_DIR}/downloads}
-			trace rm -rf "${DL_DIR}"
+	fi
+	if [ "$1" = "cleanall" ] || [ "$1" = "prune" ]; then
+		DL_DIR=${DL_DIR:-${KAS_BUILD_DIR}/downloads}
+		trace rm -rf "${DL_DIR}"
+	fi
+	if [ "$1" = "prune" ]; then
+		trace rm -rf "${KAS_BUILD_DIR}"/*
+		if [ -n "${KAS_REPO_REF_DIR}" ]; then
+			trace rm -rf "${KAS_REPO_REF_DIR}"/*
+		fi
+		if [ -n "${KAS_WORK_DIR}" ] && ! [ "${KAS_WORK_DIR}" = "${KAS_REPO_DIR}" ]; then
+			trace rm -rf "${KAS_WORK_DIR}"/*
 		fi
 	fi
 }
@@ -213,7 +223,7 @@ run_clean_rootless() {
 	# If dirs are mounted, we must only clean their content.
 	_CLEAN_CMD="rm -rf /build/tmp"
 	_MOUNT_ARGS="-v ${KAS_BUILD_DIR}:/build:rw"
-	if [ "$1" = "cleansstate" ] || [ "$1" = "cleanall" ]; then
+	if [ "$1" = "cleansstate" ] || [ "$1" = "cleanall" ] || [ "$1" = "prune" ]; then
 		if [ -n "${SSTATE_DIR}" ]; then
 			_MOUNT_ARGS="${_MOUNT_ARGS} -v ${SSTATE_DIR}:/sstate:rw"
 			_CLEAN_CMD="${_CLEAN_CMD};rm -rf /sstate/*;chown 0:0 /sstate"
@@ -221,12 +231,19 @@ run_clean_rootless() {
 			_CLEAN_CMD="${_CLEAN_CMD};rm -rf /build/sstate-cache"
 		fi
 	fi
-	if [ "$1" = "cleanall" ]; then
+	if [ "$1" = "cleanall" ] || [ "$1" = "prune" ]; then
 		if [ -n "${DL_DIR}" ]; then
 			_MOUNT_ARGS="${_MOUNT_ARGS} -v ${DL_DIR}:/downloads:rw"
 			_CLEAN_CMD="${_CLEAN_CMD};rm -rf /downloads/*;chown 0:0 /downloads"
 		else
 			_CLEAN_CMD="${_CLEAN_CMD};rm -rf /build/downloads"
+		fi
+	fi
+	if [ "$1" = "prune" ]; then
+		_CLEAN_CMD="${_CLEAN_CMD};rm -rf /build/*;chown 0:0 /build"
+		if [ -n "${KAS_WORK_DIR}" ] && ! [ "${KAS_WORK_DIR}" = "${KAS_REPO_DIR}" ]; then
+			_MOUNT_ARGS="${_MOUNT_ARGS} -v ${KAS_WORK_DIR}:/work:rw"
+			_CLEAN_CMD="${_CLEAN_CMD};rm -rf /work/*;chown 0:0 /work"
 		fi
 	fi
 	# SC2086: Double quote to prevent globbing and word splitting.
@@ -384,7 +401,7 @@ while [ $# -gt 0 ]; do
 	--*)
 		usage
 		;;
-	clean|cleansstate|cleanall)
+	clean|cleansstate|cleanall|prune)
 		KAS_CMD=$1
 		shift 1
 		break
@@ -533,7 +550,7 @@ set_container_image_var
 
 # short circuit for clean* commands. We just need
 # the build-system information, but no repo mounts, etc...
-if echo "${KAS_CMD}" | grep -qe "^clean"; then
+if echo "${KAS_CMD}" | grep -qe "^clean\|prune"; then
 	if [ "${KAS_DOCKER_ROOTLESS}" = "1" ]; then
 		run_clean_rootless "${KAS_CMD}"
 	else

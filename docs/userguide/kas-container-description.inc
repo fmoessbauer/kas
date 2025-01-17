@@ -20,6 +20,9 @@ calling directory (repo-dir). Only operations that work on a read only repo-dir 
 supported. Other operations (like ``kas shell``) are partially supported but require
 adding the ``--repo-ro`` option. The ``KAS_WORK_DIR`` is exclusively managed by the
 tooling inside the container and must not be written to from the host.
+In rootless execution, the files created by kas or bitbake cannot be deleted from the
+host, as they belong to a sub uid/gid. To remove them, use the ``kas-container prune``
+command (handle with care!).
 
 .. note::
     The ISAR build system is not compatible with rootless execution. By that,
