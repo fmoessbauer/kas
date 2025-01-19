@@ -41,6 +41,7 @@ def load():
     from . import build
     from . import for_all_repos
     from . import checkout
+    from . import clean
     from . import shell
     from . import menu
     from . import dump
@@ -48,6 +49,7 @@ def load():
 
     register_plugins(build)
     register_plugins(checkout)
+    register_plugins(clean)
     register_plugins(dump)
     register_plugins(for_all_repos)
     register_plugins(lock)
