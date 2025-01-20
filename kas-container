@@ -370,6 +370,7 @@ while [ $# -gt 0 ]; do
 		usage
 		;;
 	clean|cleansstate|cleanall)
+		KAS_REPO_MOUNT_OPT_DEFAULT="ro"
 		KAS_CMD=$1
 		shift 1
 		break
@@ -516,13 +517,6 @@ elif [ -z "${ISAR_MODE}" ]; then
 fi
 
 set_container_image_var
-
-# short circuit for clean* commands. We just need
-# the build-system information, but no repo mounts, etc...
-if echo "${KAS_CMD}" | grep -qe "^clean"; then
-	run_clean "${KAS_CMD}"
-	exit 0
-fi
 
 KAS_REPO_MOUNT_OPT="${KAS_REPO_MOUNT_OPT:-${KAS_REPO_MOUNT_OPT_DEFAULT}}"
 
