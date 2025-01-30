@@ -1,0 +1,13 @@
+[project]
+name = "kas-plugin-helloworld"
+description = "Example plugin for kas"
+keywords = [ "kas" ]
+license = { text = "MIT" }
+
+dynamic = [ "version" ]
+dependencies = [
+    "kas >= 4.6.0"
+]
+
+[project.entry-points.'kas.plugins']
+helloworld = 'kas_plugin_helloworld'
