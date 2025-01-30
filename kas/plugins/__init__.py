@@ -22,6 +22,8 @@
 """
     This module contains and manages kas plugins
 """
+import logging
+import os
 
 PLUGINS = {}
 
@@ -35,8 +37,14 @@ def register_plugins(mod):
 
 
 def load():
+    load_internal()
+    if os.environ.get('KAS_EXTERNAL_PLUGINS', '0') == '1':
+        load_external()
+
+
+def load_internal():
     """
-        Import all kas plugins
+        Import all internal kas plugins
     """
     from . import build
     from . import for_all_repos
@@ -55,6 +63,22 @@ def load():
     register_plugins(lock)
     register_plugins(shell)
     register_plugins(menu)
+
+
+def load_external():
+    import sys
+    if sys.version_info < (3, 10):
+        from importlib_metadata import entry_points
+    else:
+        from importlib.metadata import entry_points
+
+    discovered_plugins = entry_points(group='kas.plugins')
+    for entry_point in discovered_plugins:
+        try:
+            plugin = entry_point.load()
+            register_plugins(plugin)
+        except Exception as e:
+            logging.warning('Failed to load plugin %s: %s', entry_point, e)
 
 
 def get(name):
