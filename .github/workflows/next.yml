@@ -2,8 +2,8 @@ name: next
 
 on:
   push:
-    branches:
-      - next
+    branches-ignore:
+      - 'master'
 
 env:
   SHELLCHECK_VERSION: v0.10.0
@@ -111,6 +111,7 @@ jobs:
           ../../kas-container purge kas.yml
           ! [ -d poky ] && ! [ -d isar ] && ! [ -d build ]
       - name: Complete build and deploy ${{ matrix.image-name }} image
+        if: github.ref == 'refs/heads/next'
         uses: docker/build-push-action@v6
         id: push
         with:
@@ -125,6 +126,7 @@ jobs:
           tags: ghcr.io/${{ github.repository }}/${{ matrix.image-name }}:next
           annotations: ${{ env.DOCKER_METADATA_OUTPUT_ANNOTATIONS }}
       - name: Attest ${{ matrix.image-name }} image
+        if: github.ref == 'refs/heads/next'
         uses: actions/attest-build-provenance@v1
         with:
           subject-name: ghcr.io/${{ github.repository }}/${{ matrix.image-name }}
@@ -133,6 +135,7 @@ jobs:
 
   cleanup_ghcr_containers:
     name: cleanup untagged ${{ matrix.image-name }} containers
+    if: github.ref == 'refs/heads/next'
     runs-on: ubuntu-24.04
     needs: build_containers
     permissions:
