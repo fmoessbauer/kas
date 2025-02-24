@@ -17,6 +17,7 @@ jobs:
     strategy:
       matrix:
         image-name: ["kas", "kas-isar"]
+        debian-release: ["bullseye", "bookworm"]
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
@@ -50,7 +51,9 @@ jobs:
             DEBIAN_TAG=${{ env.DEBIAN_TAG }}
           provenance: false
           outputs: type=registry,rewrite-timestamp=true
-          tags: ghcr.io/${{ github.repository }}/${{ matrix.image-name }}
+          tags: |
+            ${{ matrix.debian-release == env.DEBIAN_LATEST_RELEASE && format('ghcr.io/{0}/{1}:latest', github.repository, matrix.image-name) || '' }}
+            ghcr.io/${{ github.repository }}/${{ matrix.image-name }}:latest-${{ matrix.debian-release }}
           annotations: ${{ env.DOCKER_METADATA_OUTPUT_ANNOTATIONS }}
       - name: Attest ${{ matrix.image-name }} image
         uses: actions/attest-build-provenance@v1
