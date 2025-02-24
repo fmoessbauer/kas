@@ -39,8 +39,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=${CACHE_SHARING} \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-packages.conf && \
     if echo "${DEBIAN_TAG}" | grep -q "[0-9]"; then \
-        sed -i -e '/^URIs:/d' -e 's|^# http://snapshot\.|URIs: http://snapshot.|' \
-            /etc/apt/sources.list.d/debian.sources; \
+        if echo "${DEBIAN_TAG}" | grep -q "bullseye"; then \
+            sed -i -e '/^deb/d' -e 's|^# deb http://snapshot\.|deb http://snapshot.|' \
+            /etc/apt/sources.list; \
+        else \
+            sed -i -e '/^URIs:/d' -e 's|^# http://snapshot\.|URIs: http://snapshot.|' \
+                /etc/apt/sources.list.d/debian.sources; \
+        fi; \
         echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/use-snapshot.conf; \
         echo 'Acquire::Retries "10";' >> /etc/apt/apt.conf.d/use-snapshot.conf; \
         echo 'Acquire::Retries::Delay::Maximum "600";' >> /etc/apt/apt.conf.d/use-snapshot.conf; \
@@ -50,10 +55,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=${CACHE_SHARING} \
     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
     apt-get install --no-install-recommends -y \
         python3-pip python3-setuptools python3-wheel python3-yaml python3-distro python3-jsonschema \
-        python3-newt python3-colorlog python3-kconfiglib python3-websockets \
+        python3-newt python3-colorlog python3-websockets \
         gosu lsb-release file vim less procps tree tar bzip2 zstd pigz lz4 unzip tmux libncurses-dev \
         git-lfs mercurial iproute2 ssh-client telnet curl rsync gnupg awscli sudo \
-        socat bash-completion python3-shtab python3-git && \
+        socat bash-completion python3-git && \
+    if echo "${DEBIAN_TAG}" | grep -qv "bullseye"; then \
+        apt-get install python3-shtab python3-kconfiglib; \
+    fi && \
     rm -rf /var/log/* /tmp/* /var/tmp/* /var/cache/ldconfig/aux-cache && \
     rm -f /etc/gitconfig && \
     git config --system filter.lfs.clean 'git-lfs clean -- %f' && \
@@ -63,14 +71,20 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=${CACHE_SHARING} \
 
 COPY . /kas
 
-RUN pip3 --proxy=$https_proxy install \
-        --no-deps \
-        --no-build-isolation \
-        --break-system-packages \
-        /kas && \
-    install -d /usr/local/share/bash-completion/completions/ && \
-    shtab --shell=bash -u kas.kas.kas_get_argparser --error-unimportable --prog kas \
-        > /usr/local/share/bash-completion/completions/kas && \
+RUN if echo "${DEBIAN_TAG}" | grep -qv "bullseye"; then \
+        pip3 --proxy=$https_proxy install \
+             --no-deps \
+             --no-build-isolation \
+             --break-system-packages \
+             /kas && \
+        install -d /usr/local/share/bash-completion/completions/ && \
+        shtab --shell=bash -u kas.kas.kas_get_argparser --error-unimportable --prog kas \
+            > /usr/local/share/bash-completion/completions/kas; \
+    else \
+        pip3 --proxy=$https_proxy install \
+             --no-deps \
+             /kas; \
+    fi && \
     rm -rf $(pip3 cache dir) && \
     install -m 0755 /kas/contrib/oe-git-proxy /usr/bin/ && \
     install -m 0755 /kas/container-entrypoint / && \
