@@ -46,21 +46,21 @@ usage()
 	printf "%b" "\nPositional arguments:\n"
 	printf "%b" "build\t\t\tCheck out repositories and build target.\n"
 	printf "%b" "checkout\t\tCheck out repositories but do not build.\n"
-	printf "%b" "dump\t\t\tCheck out repositories and write flat version\n"
-	printf "%b" "    \t\t\tof config to stdout.\n"
-	printf "%b" "lock\t\t\tCreate and update kas project lockfiles\n"
-	printf "%b" "shell\t\t\tRun a shell in the build environment.\n"
-	printf "%b" "for-all-repos\t\tRun specified command in each repository.\n"
 	printf "%b" "clean\t\t\tClean build artifacts, keep sstate cache and " \
+		    "downloads.\n"
+	printf "%b" "cleanall\t\tClean build artifacts, sstate cache and " \
 		    "downloads.\n"
 	printf "%b" "cleansstate\t\tClean build artifacts and sstate cache, " \
 		    "keep downloads.\n"
-	printf "%b" "cleanall\t\tClean build artifacts, sstate cache and " \
-		    "downloads.\n"
-	printf "%b" "purge\t\t\tRemove all data managed by kas. Run with '--dry-run'\n"
-	printf "%b" "     \t\t\tto check what would be removed\n"
+	printf "%b" "dump\t\t\tCheck out repositories and write flat version\n"
+	printf "%b" "    \t\t\tof config to stdout.\n"
+	printf "%b" "for-all-repos\t\tRun specified command in each repository.\n"
+	printf "%b" "lock\t\t\tCreate and update kas project lockfiles\n"
 	printf "%b" "menu\t\t\tProvide configuration menu and trigger " \
 		    "configured build.\n"
+	printf "%b" "purge\t\t\tRemove all data managed by kas. Run with '--dry-run'\n"
+	printf "%b" "     \t\t\tto check what would be removed\n"
+	printf "%b" "shell\t\t\tRun a shell in the build environment.\n"
 	printf "%b" "\nOptional arguments:\n"
 	printf "%b" "--isar\t\t\tUse kas-isar container to build Isar image.\n"
 	printf "%b" "--with-loop-dev		Pass a loop device to the " \
