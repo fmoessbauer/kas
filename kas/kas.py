@@ -142,7 +142,7 @@ def kas_get_argparser():
 
     subparser = parser.add_subparsers(help='sub command help', dest='cmd')
 
-    for plugin in plugins.all():
+    for plugin in sorted(plugins.all(), key=lambda x: x.name):
         plugin_parser = subparser.add_parser(
             plugin.name,
             help=plugin.helpmsg,
