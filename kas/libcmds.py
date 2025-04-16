@@ -38,7 +38,7 @@ from .libkas import (ssh_cleanup_agent, ssh_setup_agent, ssh_no_host_key_check,
 from .context import ManagedEnvironment as ME
 from .context import get_context
 from .includehandler import IncludeException
-from .kasusererror import ArgsCombinationError
+from .kasusererror import EnvSetButNotFoundError, ArgsCombinationError
 from .keyhandler import GPGKeyHandler, SSHKeyHandler
 from .repos import RepoRefError
 
@@ -189,13 +189,27 @@ class SetupHome(Command):
 
     def __init__(self):
         super().__init__()
-        self.tmpdirname = tempfile.mkdtemp()
+        self.tmpdirname = Path(tempfile.mkdtemp())
 
     def __del__(self):
         shutil.rmtree(self.tmpdirname)
 
     def __str__(self):
         return 'setup_home'
+
+    @staticmethod
+    def _path_from_env(name):
+        """
+        Returns the path a env var points to (if set). If the path does not
+        exist, raises an EnvSetButNotFoundError.
+        """
+        rawpath = os.environ.get(name)
+        if not rawpath:
+            return None
+        path = Path(rawpath)
+        if not path.exists():
+            raise EnvSetButNotFoundError(name, path)
+        return path
 
     @staticmethod
     def _ssh_config_present():
@@ -213,34 +227,35 @@ class SetupHome(Command):
         return False
 
     def _setup_netrc(self):
-        if os.environ.get('NETRC_FILE', False):
-            shutil.copy(os.environ['NETRC_FILE'],
-                        self.tmpdirname + "/.netrc")
+        netrc_file = self._path_from_env('NETRC_FILE')
+        if netrc_file:
+            shutil.copy(netrc_file, self.tmpdirname / '.netrc')
         if os.environ.get('CI_SERVER_HOST', False) \
                 and os.environ.get('CI_JOB_TOKEN', False):
-            with open(self.tmpdirname + '/.netrc', 'a') as fds:
+            with open(self.tmpdirname / '.netrc', 'a') as fds:
                 fds.write('machine ' + os.environ['CI_SERVER_HOST'] + '\n'
                           'login gitlab-ci-token\n'
                           'password ' + os.environ['CI_JOB_TOKEN'] + '\n')
 
     def _setup_npmrc(self):
-        if os.environ.get('NPMRC_FILE', False):
-            shutil.copy(os.environ['NPMRC_FILE'],
-                        self.tmpdirname + "/.npmrc")
+        npmrc_file = self._path_from_env('NPMRC_FILE')
+        if npmrc_file:
+            shutil.copy(npmrc_file, self.tmpdirname / '.npmrc')
 
     def _setup_registry_auth(self):
-        os.makedirs(self.tmpdirname + "/.docker")
-        if os.environ.get('REGISTRY_AUTH_FILE', False):
-            shutil.copy(os.environ['REGISTRY_AUTH_FILE'],
-                        self.tmpdirname + "/.docker/config.json")
-        elif not os.path.exists(self.tmpdirname + '/.docker/config.json'):
-            with open(self.tmpdirname + '/.docker/config.json', 'w') as fds:
+        os.makedirs(self.tmpdirname / '.docker')
+        reg_auth_file = self._path_from_env('REGISTRY_AUTH_FILE')
+        docker_conf_file = self.tmpdirname / '.docker/config.json'
+        if reg_auth_file:
+            shutil.copy(reg_auth_file, docker_conf_file)
+        elif not docker_conf_file.exists():
+            with open(docker_conf_file, 'w') as fds:
                 fds.write("{}")
 
         if os.environ.get('CI_REGISTRY', False) \
                 and os.environ.get('CI_JOB_TOKEN', False) \
                 and os.environ.get('CI_REGISTRY_USER', False):
-            with open(self.tmpdirname + '/.docker/config.json', 'r+') as fds:
+            with open(docker_conf_file, 'r+') as fds:
                 data = json.loads(fds.read())
                 token = os.environ['CI_JOB_TOKEN']
                 base64_token = base64.b64encode(token.encode()).decode()
@@ -253,31 +268,34 @@ class SetupHome(Command):
                 fds.truncate()
 
     def _setup_aws_creds(self):
-        aws_dir = self.tmpdirname + "/.aws"
-        conf_file = aws_dir + "/config"
-        shared_creds_file = aws_dir + "/credentials"
+        aws_dir = self.tmpdirname / '.aws'
+        conf_file = aws_dir / 'config'
+        shared_creds_file = aws_dir / 'credentials'
         os.makedirs(aws_dir)
-        if os.environ.get('AWS_CONFIG_FILE') \
-                and os.environ.get('AWS_SHARED_CREDENTIALS_FILE'):
-            shutil.copy(os.environ['AWS_CONFIG_FILE'], conf_file)
-            shutil.copy(os.environ['AWS_SHARED_CREDENTIALS_FILE'],
-                        shared_creds_file)
+        aws_conf_file = self._path_from_env('AWS_CONFIG_FILE')
+        aws_shared_creds_file = \
+            self._path_from_env('AWS_SHARED_CREDENTIALS_FILE')
+        if aws_conf_file and aws_shared_creds_file:
+            shutil.copy(aws_conf_file, conf_file)
+            shutil.copy(aws_shared_creds_file, shared_creds_file)
 
         # OAuth 2.0 workflow credentials
-        if os.environ.get('AWS_WEB_IDENTITY_TOKEN_FILE') \
-                and os.environ.get('AWS_ROLE_ARN'):
-            webid_token_file = aws_dir + '/web_identity_token'
+        aws_role_arn = os.environ.get('AWS_ROLE_ARN')
+        aws_web_identity_token_file = \
+            self._path_from_env('AWS_WEB_IDENTITY_TOKEN_FILE')
+        if aws_web_identity_token_file and aws_role_arn:
+            webid_token_file = aws_dir / 'web_identity_token'
             config = configparser.ConfigParser()
             if os.path.exists(conf_file):
                 config.read(conf_file)
             if 'default' not in config:
                 config['default'] = {}
-            config['default']['role_arn'] = os.environ.get('AWS_ROLE_ARN')
-            config['default']['web_identity_token_file'] = webid_token_file
-            with open(aws_dir + '/config', 'w') as fds:
+            config['default']['role_arn'] = aws_role_arn
+            config['default']['web_identity_token_file'] = \
+                str(webid_token_file)
+            with open(aws_dir / 'config', 'w') as fds:
                 config.write(fds)
-            shutil.copy(os.environ['AWS_WEB_IDENTITY_TOKEN_FILE'],
-                        webid_token_file)
+            shutil.copy(aws_web_identity_token_file, webid_token_file)
 
     @staticmethod
     def _setup_gitlab_ci_ssh_rewrite(config):
@@ -301,15 +319,17 @@ class SetupHome(Command):
                              f'ssh://git@{ci_ssh_host}:{ci_ssh_port}/')
 
     def _setup_gitconfig(self):
-        gitconfig_host = os.environ.get('GITCONFIG_FILE', False)
-        gitconfig_kas = self.tmpdirname + '/.gitconfig'
+        gitconfig_host = self._path_from_env('GITCONFIG_FILE')
+        gitconfig_kas = self.tmpdirname / '.gitconfig'
 
         # when running in a externally managed environment,
         # always try to read the gitconfig
         if not gitconfig_host and get_context().managed_env:
-            gitconfig_host = os.path.expanduser('~/.gitconfig')
+            gitconfig_host = Path('~/.gitconfig').expanduser()
+            if not gitconfig_host.exists():
+                gitconfig_host = None
 
-        if gitconfig_host and os.path.exists(gitconfig_host):
+        if gitconfig_host:
             shutil.copy(gitconfig_host, gitconfig_kas)
 
         with GitConfigParser(gitconfig_kas, read_only=False) as config:
@@ -322,12 +342,12 @@ class SetupHome(Command):
                         os.environ.get('GIT_CREDENTIAL_USEHTTPPATH')
 
             if get_context().managed_env == ME.GITLAB_CI and \
-                    not os.path.exists(gitconfig_host):
-                ci_project_dir = os.environ.get('CI_PROJECT_DIR', False)
+                    not gitconfig_host:
+                ci_project_dir = self._path_from_env('CI_PROJECT_DIR')
                 if ci_project_dir:
                     logging.debug('Adding git safe.directory %s',
                                   ci_project_dir)
-                    config.add_value('safe', 'directory', ci_project_dir)
+                    config.add_value('safe', 'directory', str(ci_project_dir))
 
                 ci_server = os.environ.get('CI_SERVER_HOST', None)
                 if ci_server and not self._ssh_config_present():
@@ -347,7 +367,7 @@ class SetupHome(Command):
         self._setup_aws_creds()
         os.umask(def_umask)
 
-        ctx.environ['HOME'] = self.tmpdirname
+        ctx.environ['HOME'] = str(self.tmpdirname)
 
 
 class SetupDir(Command):

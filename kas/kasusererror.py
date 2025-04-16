@@ -76,6 +76,16 @@ class ArtifactNotFoundError(KasUserError, FileNotFoundError):
         super().__init__(f'No artifact found for {name}:"{artifact}"')
 
 
+class EnvSetButNotFoundError(KasUserError, FileNotFoundError):
+    """
+    A environment variable pointing to a file is set, but the file
+    it points to does not exist.
+    """
+    def __init__(self, env_name, path):
+        super().__init__(f'Environment variable "{env_name}" is set, but the '
+                         f'path does not exist: {path}')
+
+
 class MissingModuleError(KasUserError):
     """
     An optional module is missing for the requested operation
