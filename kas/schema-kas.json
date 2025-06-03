@@ -255,7 +255,12 @@
                                             "type": "null"
                                         },
                                         {
-                                            "enum": ["disabled", "excluded", "n", "no", "0", "false", 0, false]
+                                            "description": "Exclude this layer from bblayers.conf.",
+                                            "enum": ["disabled"]
+                                        },
+                                        {
+                                            "description": "Deprecated, use ``disable`` instead.",
+                                            "enum": ["excluded", "n", "no", "0", "false", 0, false]
                                         }
                                     ]
                                 }
