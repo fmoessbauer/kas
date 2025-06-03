@@ -261,6 +261,7 @@
                                         },
                                         {
                                             "type": "integer",
+                                            "description": "Deprecated, use boolean false instead.",
                                             "enum": [0]
                                         },
                                         {
@@ -269,6 +270,7 @@
                                         },
                                         {
                                             "type": "string",
+                                            "description": "Deprecated, use boolean false instead.",
                                             "enum": ["disabled", "excluded", "n", "no", "0", "false"]
                                         }
                                     ]
