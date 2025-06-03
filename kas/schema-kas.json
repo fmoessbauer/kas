@@ -260,13 +260,16 @@
                                             "type": "null"
                                         },
                                         {
-                                            "type": "integer"
+                                            "type": "integer",
+                                            "enum": [0]
                                         },
                                         {
-                                            "type": "boolean"
+                                            "type": "boolean",
+                                            "enum": [false]
                                         },
                                         {
-                                            "type": "string"
+                                            "type": "string",
+                                            "enum": ["disabled", "excluded", "n", "no", "0", "false"]
                                         }
                                     ]
                                 }
