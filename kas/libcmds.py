@@ -36,7 +36,6 @@ from git.config import GitConfigParser
 from .libkas import (ssh_cleanup_agent, ssh_setup_agent, ssh_no_host_key_check,
                      get_build_environ, repos_fetch, repos_apply_patches)
 from .context import ManagedEnvironment as ME
-from .context import get_context
 from .includehandler import IncludeException
 from .kasusererror import EnvSetButNotFoundError, ArgsCombinationError
 from .keyhandler import GPGKeyHandler, SSHKeyHandler
@@ -317,13 +316,13 @@ class SetupHome(Command):
             config.add_value(section, 'insteadOf',
                              f'ssh://git@{ci_ssh_host}:{ci_ssh_port}/')
 
-    def _setup_gitconfig(self):
+    def _setup_gitconfig(self, ctx):
         gitconfig_host = self._path_from_env('GITCONFIG_FILE')
         gitconfig_kas = self.tmpdirname + '/.gitconfig'
 
         # when running in a externally managed environment,
         # always try to read the gitconfig
-        if not gitconfig_host and get_context().managed_env:
+        if not gitconfig_host and ctx.managed_env:
             gitconfig_host = Path('~/.gitconfig').expanduser()
             if not gitconfig_host.exists():
                 gitconfig_host = None
@@ -340,7 +339,7 @@ class SetupHome(Command):
                     config['credential']['useHttpPath'] = \
                         os.environ.get('GIT_CREDENTIAL_USEHTTPPATH')
 
-            if get_context().managed_env == ME.GITLAB_CI and \
+            if ctx.managed_env == ME.GITLAB_CI and \
                     not gitconfig_host:
                 ci_project_dir = self._path_from_env('CI_PROJECT_DIR')
                 if ci_project_dir:
@@ -355,14 +354,14 @@ class SetupHome(Command):
             config.write()
 
     def execute(self, ctx):
-        managed_env = get_context().managed_env
+        managed_env = ctx.managed_env
         if managed_env:
             logging.info(f'Running on {managed_env}')
         def_umask = os.umask(0o077)
         self._setup_netrc()
         self._setup_npmrc()
         self._setup_registry_auth()
-        self._setup_gitconfig()
+        self._setup_gitconfig(ctx)
         self._setup_aws_creds()
         os.umask(def_umask)
 
