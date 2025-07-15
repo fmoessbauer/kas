@@ -63,6 +63,10 @@ class Clean():
                             action='store_true',
                             default=False,
                             help='Use ISAR build directory layout')
+        parser.add_argument('--recover',
+                            action='store_true',
+                            default=False,
+                            help='Try to recover from a disk-full situation')
         parser.add_argument('config',
                             help='Config file(s), separated by colon. Using '
                                  '.config.yaml in KAS_WORK_DIR if existing '
@@ -72,7 +76,8 @@ class Clean():
     def run(self, args):
         ctx = create_global_context(args)
         build_system = None
-        if args.config or (Path(ctx.kas_work_dir) / CONFIG_YAML_FILE).exists():
+        default_conf_file = Path(ctx.kas_work_dir) / CONFIG_YAML_FILE
+        if not args.recover and (args.config or default_conf_file.exists()):
             ctx.config = Config(ctx, args.config)
             # to read the config, we need all repos (but no build env),
             macro = Macro()
@@ -83,6 +88,8 @@ class Clean():
             build_system = 'isar'
 
         logging.debug('Run clean in "%s" mode' % (build_system or 'default'))
+        if args.recover:
+            logging.warning('Running in recovery mode, config is ignored')
         if args.dry_run:
             logging.warning('Dry run, not removing anything')
         tmpdirs = Path(ctx.build_dir).glob('tmp*')
