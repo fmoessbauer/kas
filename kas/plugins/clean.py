@@ -104,8 +104,7 @@ class Clean():
         if len(dirs_to_remove) == 0:
             return
 
-        clean_args = ['sudo', '--prompt', '[sudo] enter password for %U '
-                      'to clean ISAR artifacts']
+        clean_args = Clean.get_sudo_cmd('clean ISAR artifacts')
         clean_args.extend(['rm', '-rf'])
         clean_args.extend([p.as_posix() for p in dirs_to_remove])
         logging.debug(' '.join(clean_args))
@@ -122,6 +121,32 @@ class Clean():
                 shutil.rmtree(item)
             else:
                 item.unlink()
+
+    @staticmethod
+    def get_sudo_cmd(reason):
+        """
+        Resolve which privileged executor shall be used (prefer sudo).
+        If supported by the executor, the reason is added to the prompt.
+        """
+        sudo_cmd = os.environ.get('KAS_SUDO_CMD')
+        if not sudo_cmd:
+            if shutil.which('sudo'):
+                sudo_cmd = 'sudo'
+            elif shutil.which('run0'):
+                sudo_cmd = 'run0'
+            else:
+                raise KasUserError('No privileged executor found, '
+                                   'need sudo or run0.')
+
+        if sudo_cmd == 'sudo':
+            prompt = '[sudo] enter password for %U'
+            if reason:
+                prompt += f' to {reason}'
+            return [sudo_cmd, '--prompt', prompt]
+        elif sudo_cmd == 'run0':
+            return [sudo_cmd, '--background=', '--unit=kas@$$']
+        else:
+            raise KasUserError('Unsupported KAS_SUDO_CMD, use sudo or run0.')
 
 
 class CleanSstate(Clean):

@@ -201,11 +201,12 @@ overwritten using the ``env`` section of the config file.
 |                          | auto-detected (preference: docker).              |
 +--------------------------+--------------------------------------------------+
 | ``KAS_SUDO_CMD``         | Explicitly set the sudo command (either ``sudo`` |
-| (C)                      | or ``run0``) for operations that require higher  |
+| (C,K)                    | or ``run0``) for operations that require higher  |
 |                          | privileges. If not set, this is auto-detected    |
 |                          | (preference: ``sudo``). Note, that ``run0`` does |
 |                          | not preserve the environment and cannot setup    |
-|                          | loopback devices.                                |
+|                          | loopback devices. The `KAS_SUDO_CMD` needs to be |
+|                          | explicitly set inside the container.             |
 +--------------------------+--------------------------------------------------+
 
 .. |aws_cred| replace:: ``AWS_ROLE_ARN``
