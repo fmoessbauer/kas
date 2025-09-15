@@ -35,7 +35,7 @@ target: mc:qemuamd64-bullseye:cowsay
 repos:
   isar:
     url: https://github.com/ilbers/isar.git
-    commit: 9dc362cd7115074c0f60843e687ed89db5c9339a
+    commit: f8558fcf3ecf98e58853b82d89645bcedb24b853
     layers:
       meta:
       meta-isar:
