@@ -42,8 +42,17 @@ runs:
         echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> $GITHUB_ENV
       shell: bash
 
+    - name: Validate distro-release argument
+      run: |
+        if [[ ! "${{ inputs.distro-release }}" == debian-* ]]; then
+          echo "Non debian 'distro-release' values are currently not supported"
+          exit 1
+        else
+          echo "'distro-release' is a Debian"
+        fi
+      shell: bash
+
     - name: Determine Debian tag
-      if: ${{ startsWith(inputs['distro-release'], 'debian-') }}
       run: |
         COMMIT_DATE=$(date -d @$(git log -1 --pretty=%ct) +%Y%m%d)
         DEBIAN_LATEST_RELEASE=$(grep -m 1 'ARG DEBIAN_TAG=' Dockerfile | sed 's/.*DEBIAN_TAG=\(.*\)-.*/\1/')
@@ -58,13 +67,6 @@ runs:
                            ./scripts/lower-bound.py $DEBIAN_RELEASE-$COMMIT_DATE-slim )" \
                            >> $GITHUB_ENV
         echo "DISTRO_LATEST_RELEASE=debian-$DEBIAN_LATEST_RELEASE" >> $GITHUB_ENV
-      shell: bash
-
-    - name: Determine generic tag
-      if: ${{ !startsWith(inputs['distro-release'], 'debian-') }}
-      run: |
-        echo "Non debian 'distro-release' values are currently not supported"
-        exit 1
       shell: bash
 
     - name: Prepare repository for COPY-in
