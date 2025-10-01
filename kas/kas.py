@@ -63,7 +63,8 @@ def create_logger():
         Setup the logging environment
     """
     log = logging.getLogger()  # root logger
-    log.setLevel(DEFAULT_LOG_LEVEL.upper())
+    if not is_pytest():
+        log.setLevel(DEFAULT_LOG_LEVEL.upper())
     format_str = '%(asctime)s - %(levelname)-8s - %(message)s'
     date_format = '%Y-%m-%d %H:%M:%S'
     if HAVE_COLORLOG and os.isatty(2):
@@ -185,7 +186,7 @@ def kas(argv):
     parser = kas_get_argparser()
     args = parser.parse_args(argv)
 
-    if args.log_level:
+    if not is_pytest() and args.log_level:
         logging.getLogger().setLevel(args.log_level.upper())
 
     logging.info('%s %s started', os.path.basename(sys.argv[0]), __version__)
