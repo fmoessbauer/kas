@@ -51,6 +51,13 @@ __copyright__ = 'Copyright (c) Siemens AG, 2017-2018'
 DEFAULT_LOG_LEVEL = 'info'
 
 
+def is_pytest():
+    """
+    True if we are invoked under pytest
+    """
+    return "PYTEST_CURRENT_TEST" in os.environ
+
+
 def create_logger():
     """
         Setup the logging environment
@@ -188,7 +195,7 @@ def kas(argv):
 
     loop.add_signal_handler(signal.SIGTERM, interruption)
     # don't overwrite pytest's signal handler
-    if "PYTEST_CURRENT_TEST" not in os.environ:
+    if not is_pytest():
         loop.add_signal_handler(signal.SIGINT, interruption)
 
     try:
