@@ -31,6 +31,7 @@ import pytest
 from kas import kas
 from kas.libkas import TaskExecError, KasUserError, run_cmd
 from kas.attestation import file_digest_slow
+from kas.repos import RepoFetchError
 
 
 @pytest.mark.dirsfromenv
@@ -81,6 +82,15 @@ def test_checkout(monkeykas, tmpdir):
     assert not glob.glob(f'{str(kas_bd)}/tmp*')
     assert not (kas_bd / 'downloads').exists()
     assert not (kas_bd / 'sstate-cache').exists()
+
+    # test re-fetching
+    kas.kas(['checkout', '--update', 'test.yml'])
+
+    with monkeykas.context() as mc:
+        from kas.repos import GitRepo
+        mc.setattr(GitRepo, "fetch_cmd", lambda _: ["false"])
+        with pytest.raises(RepoFetchError):
+            kas.kas(['checkout', '--update', 'test.yml'])
 
 
 def test_invalid_checkout(monkeykas, tmpdir, capsys):
