@@ -83,6 +83,14 @@ class PatchApplyError(KasUserError):
         super().__init__(msg)
 
 
+class RepoFetchError(KasUserError):
+    """
+    An error occurred during repo fetching
+    """
+    def __init__(self, repo, output):
+        super().__init__(f'Fetching of repo: "{repo.name}" failed: {output}')
+
+
 class Repo:
     """
         Represents a repository in the kas configuration.
@@ -361,9 +369,8 @@ class RepoImpl(Repo):
         """
             Starts asynchronous repository fetch.
         """
-
         if self.operations_disabled:
-            return 0
+            return
 
         refdir = get_context().kas_repo_ref_dir
         sdir = os.path.join(refdir, self.qualified_name) if refdir else None
@@ -404,7 +411,7 @@ class RepoImpl(Repo):
         # take what came out of clone and stick to that forever
         if self.commit is None and self.tag is None and self.branch is None \
            and self.refspec is None:
-            return 0
+            return
 
         if not get_context().update:
             # Do commit/tag/branch/refspec exist in the current repository?
@@ -424,9 +431,9 @@ class RepoImpl(Repo):
                     (_, output) = await run_cmd_async(
                         self.branch_contains_ref(), cwd=self.path, fail=False)
                     if output.strip():
-                        return retc
+                        return
                 else:
-                    return retc
+                    return
 
         # Try to fetch if commit/tag/branch/refspec is missing or if --update
         # argument was passed
@@ -436,9 +443,10 @@ class RepoImpl(Repo):
         if retc:
             logging.warning('Could not update repository %s: %s',
                             self.name, output)
+            raise RepoFetchError(self, output)
         else:
             logging.info('Repository %s updated', self.name)
-        return 0
+        return
 
     def checkout(self):
         """
