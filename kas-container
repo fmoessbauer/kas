@@ -242,6 +242,7 @@ setup_kas_dirs()
 	KAS_REPO_REF_DIR="$(check_and_expand KAS_REPO_REF_DIR required)"
 	DL_DIR="$(check_and_expand DL_DIR createrec)"
 	SSTATE_DIR="$(check_and_expand SSTATE_DIR createrec)"
+	BB_HASHSERVE_DB_DIR="$(check_and_expand BB_HASHSERVE_DB_DIR createrec)"
 	KAS_BUILDTOOLS_DIR="$(check_and_expand KAS_BUILDTOOLS_DIR createrec)"
 }
 
@@ -632,6 +633,7 @@ forward_dir KAS_BUILD_DIR "/build" "rw"
 forward_dir DL_DIR "/downloads" "rw"
 forward_dir KAS_REPO_REF_DIR "/repo-ref" "rw"
 forward_dir SSTATE_DIR "/sstate" "rw"
+forward_dir BB_HASHSERVE_DB_DIR "/bb-hashserve-db" "rw"
 forward_dir KAS_BUILDTOOLS_DIR "/buildtools" "rw"
 
 if git_com_dir=$(git -C "${KAS_REPO_DIR}" rev-parse --git-common-dir 2>/dev/null) \
@@ -753,6 +755,7 @@ fi
 for var in TERM KAS_DISTRO KAS_MACHINE KAS_TARGET KAS_TASK KAS_CLONE_DEPTH \
            KAS_PREMIRRORS DISTRO_APT_PREMIRRORS BB_NUMBER_THREADS PARALLEL_MAKE \
            GIT_CREDENTIAL_USEHTTPPATH \
+           BB_HASHSERVE BB_HASHSERVE_UPSTREAM \
            TZ; do
 	if [ -n "$(eval echo \$${var})" ]; then
 		set -- "$@" -e "${var}=$(eval echo \"\$${var}\")"

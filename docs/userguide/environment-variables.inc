@@ -130,9 +130,10 @@ overwritten using the ``env`` section of the config file.
 |                          | ``SSH_PRIVATE_KEY_FILE``).                       |
 +--------------------------+--------------------------------------------------+
 | ``DL_DIR``               | Environment variables that are transferred to    |
-| ``SSTATE_DIR``           | the bitbake environment. The ``DL_DIR`` and      |
-| ``SSTATE_MIRRORS``       | ``SSTATE_DIR`` directories are created along     |
-| (C,K,E,c)                | with their parents, if set.                      |
+| ``SSTATE_DIR``           | the bitbake environment. The ``DL_DIR``,         |
+| ``SSTATE_MIRRORS``       | ``SSTATE_DIR`` and ``BB_HASHSERVE_DB_DIR``       |
+| ``BB_HASHSERVE_DB_DIR``  | directories are created along with their         |
+| (C,K,E,c)                | parents, if set.                                 |
 +--------------------------+--------------------------------------------------+
 | ``TMPDIR`` (K,E,c)       | Directory for temporary files.                   |
 +--------------------------+--------------------------------------------------+
