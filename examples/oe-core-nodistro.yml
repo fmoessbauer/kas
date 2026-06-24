@@ -39,8 +39,8 @@ target: zlib-native
 repos:
   bitbake:
     url: https://github.com/openembedded/bitbake.git
-    tag: yocto-5.2.3
-    commit: 710f98844ae30416bdf6a01b655df398b49574ec
+    tag: yocto-6.0.1
+    commit: 22021758e66737bcf68dfd2b74adc6a0cb1d42d9
     signed: true
     allowed_signers:
       - YoctoBuildandRelease
@@ -49,8 +49,8 @@ repos:
 
   core:
     url: https://github.com/openembedded/openembedded-core.git
-    tag: yocto-5.2.3
-    commit: 347cb0861dde58613541ce692778f907943a60ea
+    tag: yocto-6.0.1
+    commit: 06dd66e6220e5ce4ed4b9af4d8231ae5f0a8ce80
     signed: true
     allowed_signers:
       - YoctoBuildandRelease
