@@ -133,7 +133,9 @@ overwritten using the ``env`` section of the config file.
 | ``SSTATE_DIR``           | the bitbake environment. The ``DL_DIR``,         |
 | ``SSTATE_MIRRORS``       | ``SSTATE_DIR`` and ``BB_HASHSERVE_DB_DIR``       |
 | ``BB_HASHSERVE_DB_DIR``  | directories are created along with their         |
-| (C,K,E,c)                | parents, if set.                                 |
+| ``BB_HASHSERVE``         | parents, if set.                                 |
+| ``BB_HASHSERVE_UPSTREAM``|                                                  |
+| (C,K,E,c)                |                                                  |
 +--------------------------+--------------------------------------------------+
 | ``TMPDIR`` (K,E,c)       | Directory for temporary files.                   |
 +--------------------------+--------------------------------------------------+

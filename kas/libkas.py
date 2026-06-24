@@ -495,7 +495,7 @@ def get_build_environ(build_system, ctx):
     conf_env = ctx.config.get_environment()
 
     env_vars = ['SSTATE_DIR', 'SSTATE_MIRRORS', 'BB_HASHSERVE_DB_DIR',
-                'DL_DIR', 'TMPDIR']
+                'BB_HASHSERVE', 'BB_HASHSERVE_UPSTREAM', 'DL_DIR', 'TMPDIR']
     env_vars.extend(conf_env)
 
     env.update(conf_env)
