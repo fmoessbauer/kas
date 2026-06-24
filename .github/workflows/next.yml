@@ -107,6 +107,17 @@ jobs:
           if [[ "${{ matrix.image-name }}" == "kas" ]]; then
             echo "Test oe-core nodistro"
             ../../kas-container build ../../examples/oe-core-nodistro.yml
+            ../../kas-container cleansstate ../../examples/oe-core-nodistro.yml
+
+            echo "Test oe-core nodistro with upstream hash equivalence server"
+            export BB_HASHSERVE="auto"
+            export BB_HASHSERVE_UPSTREAM="wss://hashserv.yoctoproject.org/ws"
+            export SSTATE_MIRRORS="file://.* https://sstate.yoctoproject.org/all/PATH;downloadfilename=PATH"
+            ../../kas-container build ../../examples/oe-core-nodistro.yml
+            grep -q $BB_HASHSERVE_UPSTREAM build/tmp/log/eventlog/*.json || {
+              echo "Upstream hash equivalence server not used"
+              exit 1
+            }
           fi
       - name: Complete build and deploy ${{ matrix.image-name }} image
         if: github.ref == 'refs/heads/next'
